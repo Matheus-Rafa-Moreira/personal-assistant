@@ -20,8 +20,10 @@ CREATE TABLE IF NOT EXISTS events (
   contact_name TEXT,
   contact_phone TEXT,
   notion_url TEXT,
-  source TEXT DEFAULT 'app',      -- app | caldav | seed
+  source TEXT DEFAULT 'app',      -- app | caldav | seed | replan
   caldav_uid TEXT,                -- iCloud event UID when synced
+  caldav_url TEXT,                -- iCloud calendar object URL, required by CalDAV updates
+  caldav_etag TEXT,               -- iCloud ETag, required by CalDAV updates
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now'))
 );
@@ -31,7 +33,9 @@ CREATE TABLE IF NOT EXISTS event_overrides (
   date TEXT NOT NULL,             -- YYYY-MM-DD being overridden
   new_start TEXT, new_end TEXT,   -- NULL start+end = cancelled that day
   new_title TEXT,
-  reason TEXT                     -- e.g. 'replan 2026-09-15'
+  steps_state TEXT,               -- JSON array of booleans, index-aligned with events.steps
+  reason TEXT,                    -- e.g. 'replan 2026-09-15'
+  UNIQUE(event_id, date)
 );
 CREATE TABLE IF NOT EXISTS goals (
   id INTEGER PRIMARY KEY,
