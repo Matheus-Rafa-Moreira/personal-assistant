@@ -96,3 +96,60 @@ live Notion sync, call logging, family shared calendar.
 Small commits with clear messages. Never commit secrets or .dev.vars. Never
 print secret values. Don't restructure architecture without Matt's OK. Personal
 data stays in this private repo only.
+
+
+## v1.1 SPEC — "Alfred" upgrade (2026-07-30, from Matt's refinement transcript) — CURRENT WORK
+Priority order: (1) Alfred widget, (2) iOS-Calendar-look redesign, (3) year
+scoping + rollover, (4) CalDAV family-calendar fix, (5) verify cron registered.
+
+### 1. ALFRED — assistant widget (THE differentiating feature)
+- Persistent bottom bar on EVERY view, mobile + desktop: text input + mic
+  button + send. Tapping expands a chat sheet (conversation history, session-only).
+- Backend: POST /api/alfred {messages:[...]} -> OpenAI chat w/ TOOLS executed
+  server-side against D1: list_events(start,end), create_event(obj),
+  update_event(id,patch), move_event(id,start,end), delete_event(id),
+  replan(date,disruption), list_categories, add_goal, list_goals.
+  Loop tool calls until final text; return {reply, actions:[summaries]}.
+  Destructive ops (delete, bulk change) need a confirm round-trip.
+- System prompt: "You are Alfred, Matt's personal calendar assistant." Inject
+  today's date, TZ America/Toronto, category list. Replies SHORT and speakable.
+- Voice IN: Web Speech API (webkitSpeechRecognition) where available;
+  fallback MediaRecorder -> POST /api/transcribe -> OpenAI transcription.
+- Voice OUT: if the turn arrived by voice, speak reply via speechSynthesis
+  (natural en voice, mute toggle). Conversation feel: voice in -> voice out.
+- Calendar view refreshes immediately after any Alfred write.
+
+### 2. iOS CALENDAR LOOKALIKE (frontend redesign)
+- FACT: Apple Calendar is not open source; replicate the AESTHETIC by hand.
+  Success criterion = passes the "looks like iOS Calendar" eyeball test.
+- -apple-system font stack, iOS red #FF3B30 accent, light/dark auto.
+- Month: clean grid, tiny event dots/bars, today = red circle. Tap day ->
+  day timeline (hour lines, rounded colored blocks w/ left accent bar).
+  Week + list views styled to match. Top bar: "< Year", month title, +.
+- Keep no-build vanilla JS. If FullCalendar can't be themed close enough,
+  hand-roll month grid + day timeline (permitted and probably cleaner).
+- Event sheet mirrors iOS: rounded card; rows for time, repeat, location
+  (-> Apple Maps link), contact (-> tel:), Notion link, checklist steps.
+- De-clutter is the point: fewer borders, more whitespace, no toolbars.
+
+### 3. YEAR SCOPING + ROLLOVER
+- sync_state key active_year (default 2026). All navigation clamped to
+  Jan 1 - Dec 31 of active_year (matches Matt's storage/simplicity intent).
+- Settings: "Prepare 2027" wizard -> copies recurring events forward with
+  new UNTILs, shows review list for edits, then switches active_year.
+
+### 4. CALDAV FIX
+- Matt set the wrong target calendar during secrets. His iCloud calendars:
+  Family, Home, Work, Holidays in Canada, Birthdays, (+gmail accounts).
+- Fix: npx wrangler secret put CALDAV_CALENDAR_NAME -> value exactly: Family
+- Sync loop must read/write ONLY that calendar.
+
+### 5. Verify the */30 cron actually registered on deploy (commit dc932fa
+  noted it pending). wrangler deploy output must list the schedule.
+
+### Acceptance test (all must pass before "done")
+- One VOICE prompt to Alfred creates an event, moves another, and answers
+  "what does my Tuesday look like" — spoken reply.
+- UI eyeball test vs iOS Calendar passes on iPhone + desktop.
+- Year nav clamped to 2026; rollover wizard produces editable 2027 copy.
+- Family calendar shows a test event synced from the app within 30 min.
