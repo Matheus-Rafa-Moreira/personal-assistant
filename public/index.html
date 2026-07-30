@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Personal Life Assistant</title>
+  <meta name="theme-color" content="#4F46E5" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body>
+  <div id="app">
+    <header id="app-header">
+      <h1>Personal Life Assistant</h1>
+      <nav class="view-switch" id="view-switch">
+        <button data-view="dayGridMonth" class="active">Month</button>
+        <button data-view="timeGridWeek">Week</button>
+        <button data-view="timeGridDay">Day</button>
+        <button data-view="listWeek">List</button>
+      </nav>
+      <div class="header-actions">
+        <button id="btn-add" class="btn-primary">+ Add</button>
+        <button id="btn-replan" class="btn-secondary">Something changed</button>
+        <button id="btn-theme" class="btn-icon" title="Toggle theme" aria-label="Toggle theme">&#9789;</button>
+      </div>
+    </header>
+
+    <div id="legend" class="legend"></div>
+
+    <main id="calendar"></main>
+
+    <div id="scrim" class="scrim hidden"></div>
+
+    <!-- Quick-add bar -->
+    <section id="quick-add" class="sheet hidden" aria-label="Add event">
+      <form id="quick-add-form">
+        <h2>New event</h2>
+        <input type="text" id="qa-title" placeholder="What's happening?" required autocomplete="off" />
+        <div class="qa-row">
+          <label>Start <input type="datetime-local" id="qa-start" required /></label>
+          <label>End <input type="datetime-local" id="qa-end" required /></label>
+        </div>
+        <div class="qa-row">
+          <label class="grow">Category <select id="qa-category"></select></label>
+        </div>
+        <div class="qa-row">
+          <label class="grow">Repeats
+            <select id="qa-repeat">
+              <option value="">Doesn't repeat</option>
+              <option value="FREQ=DAILY">Daily</option>
+              <option value="FREQ=WEEKLY">Weekly</option>
+              <option value="FREQ=WEEKLY;INTERVAL=2">Every 2 weeks</option>
+              <option value="FREQ=MONTHLY">Monthly</option>
+            </select>
+          </label>
+        </div>
+        <div class="sheet-actions">
+          <button type="button" class="btn-cancel" data-close="quick-add">Cancel</button>
+          <button type="submit" class="btn-primary">Save</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Event detail drawer -->
+    <section id="detail-drawer" class="sheet hidden" aria-label="Event detail">
+      <div class="drawer-header">
+        <span id="detail-category-badge" class="badge"></span>
+        <button class="btn-close" data-close="detail-drawer" aria-label="Close">&times;</button>
+      </div>
+      <h2 id="detail-title"></h2>
+      <p id="detail-time" class="muted"></p>
+      <p id="detail-repeat" class="muted hidden"></p>
+      <p id="detail-description" class="hidden"></p>
+
+      <div id="detail-steps" class="steps hidden"></div>
+
+      <a id="detail-location" class="detail-link hidden" target="_blank" rel="noopener">&#128205; <span></span></a>
+      <a id="detail-contact" class="detail-link hidden">&#128222; <span></span></a>
+      <a id="detail-notion" class="detail-link hidden" target="_blank" rel="noopener">&#128214; Notion guide &rarr;</a>
+
+      <div class="drawer-actions">
+        <button id="detail-edit" class="btn-secondary">Edit</button>
+        <button id="detail-delete" class="btn-danger">Delete</button>
+      </div>
+    </section>
+
+    <!-- Replan panel -->
+    <section id="replan-panel" class="sheet sheet-wide hidden" aria-label="Replan day">
+      <div class="drawer-header">
+        <h2>Something changed</h2>
+        <button class="btn-close" data-close="replan-panel" aria-label="Close">&times;</button>
+      </div>
+
+      <div id="replan-form">
+        <label>Date <input type="date" id="replan-date" /></label>
+        <label>What changed? <textarea id="replan-disruption" rows="2" placeholder="e.g. gym cancelled, need to see a dentist at 2pm"></textarea></label>
+        <button id="replan-submit" class="btn-primary">Get suggestions</button>
+      </div>
+
+      <div id="replan-result" class="hidden">
+        <p id="replan-summary" class="muted"></p>
+        <div class="replan-columns">
+          <div>
+            <h3>Current</h3>
+            <ul id="replan-current"></ul>
+          </div>
+          <div>
+            <h3>Proposed</h3>
+            <ul id="replan-proposed"></ul>
+          </div>
+        </div>
+        <div class="sheet-actions">
+          <button id="replan-cancel" class="btn-cancel">Discard</button>
+          <button id="replan-accept" class="btn-primary">Accept</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
+    }
+  </script>
+</body>
+</html>
