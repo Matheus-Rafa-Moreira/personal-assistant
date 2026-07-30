@@ -77,8 +77,10 @@ inserting slack." Use OPENAI_MODEL, max_tokens ~1200, temperature 0.3.
 [x] Repo scaffold, schema, seed, config (built by Claude chat 2026-07-30)
 [x] D1 database created in CF account
 [x] worker.js implementation   [x] public/ frontend implementation
-[x] npm install                [ ] deploy              [ ] secrets set
-[ ] Access gate
+[x] npm install                [x] deploy              [x] secrets set
+[x] Access gate
+[ ] Cron trigger (dashboard — wrangler OAuth token 403'd on /schedules, add
+    manually: Workers & Pages -> personal-assistant -> Triggers -> Cron)
 [ ] Shortcuts notes automation [ ] on-device testing  [ ] wipe test data
 v2 backlog: sellable template repo, MyScholarshipFinder (idea in Apple Notes),
 live Notion sync, call logging, family shared calendar.
