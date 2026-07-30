@@ -80,10 +80,15 @@ inserting slack." Use OPENAI_MODEL, max_tokens ~1200, temperature 0.3.
 [x] D1 database created in CF account
 [x] worker.js implementation   [x] public/ frontend implementation
 [x] npm install                [x] deploy              [x] secrets set
-[x] Access gate
-[ ] Cron trigger (dashboard — wrangler OAuth token 403'd on /schedules, add
-    manually: Workers & Pages -> personal-assistant -> Triggers -> Cron)
-[ ] Shortcuts notes automation [ ] on-device testing  [ ] wipe test data
+[x] Access gate                [x] Cron trigger (needed a workers.dev
+    subdomain provisioned first, then `wrangler deploy` attached it clean)
+[x] Shortcuts notes automation [x] on-device testing  [x] Git repo connected
+    for auto-deploy on push
+CalDAV: confirmed connecting to real iCloud + completing a sync cycle
+cleanly (last_sync/last_push in sync_state). Not yet confirmed moving real
+data both directions — add a test event in-app and in the "Personal
+Assistant" iCloud calendar and check it shows up on the other side after
+the next 30-min cycle, whenever convenient.
 v2 backlog: sellable template repo, MyScholarshipFinder (idea in Apple Notes),
 live Notion sync, call logging, family shared calendar.
 
