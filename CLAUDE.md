@@ -153,3 +153,7 @@ scoping + rollover, (4) CalDAV family-calendar fix, (5) verify cron registered.
 - UI eyeball test vs iOS Calendar passes on iPhone + desktop.
 - Year nav clamped to 2026; rollover wizard produces editable 2027 copy.
 - Family calendar shows a test event synced from the app within 30 min.
+
+## V2 DECISION LOG (2026-07-30)
+- Family calendar CalDAV sync: PULL IN ONLY (read-only import; never push).
+- Authoritative V2 spec: REFINEMENTS.md (wins over v1.1 notes above on conflict).
