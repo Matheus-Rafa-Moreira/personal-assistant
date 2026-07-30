@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Personal Life Assistant</title>
-  <meta name="theme-color" content="#4F46E5" />
+  <meta name="theme-color" content="#FF3B30" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="apple-touch-icon" href="/icons/icon-192.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -14,25 +14,44 @@
 <body>
   <div id="app">
     <header id="app-header">
-      <h1>Personal Life Assistant</h1>
-      <nav class="view-switch" id="view-switch">
-        <button data-view="dayGridMonth" class="active">Month</button>
-        <button data-view="timeGridWeek">Week</button>
-        <button data-view="timeGridDay">Day</button>
-        <button data-view="listWeek">List</button>
-      </nav>
+      <button id="nav-up" class="nav-back">&lsaquo; Year</button>
+      <div class="nav-center">
+        <button id="nav-prev" class="nav-chevron" aria-label="Previous">&lsaquo;</button>
+        <h1 id="nav-title">Month</h1>
+        <button id="nav-next" class="nav-chevron" aria-label="Next">&rsaquo;</button>
+      </div>
       <div class="header-actions">
-        <button id="btn-add" class="btn-primary">+ Add</button>
-        <button id="btn-replan" class="btn-secondary">Something changed</button>
-        <button id="btn-theme" class="btn-icon" title="Toggle theme" aria-label="Toggle theme">&#9789;</button>
+        <button id="btn-more" class="btn-icon" title="More" aria-label="More">&#8943;</button>
+        <button id="btn-add" class="btn-icon-plus" aria-label="Add event">+</button>
       </div>
     </header>
+
+    <nav class="view-switch" id="view-switch">
+      <button data-view="multiMonthYear">Year</button>
+      <button data-view="dayGridMonth" class="active">Month</button>
+      <button data-view="timeGridWeek">Week</button>
+      <button data-view="timeGridDay">Day</button>
+      <button data-view="listWeek">List</button>
+    </nav>
 
     <div id="legend" class="legend"></div>
 
     <main id="calendar"></main>
 
     <div id="scrim" class="scrim hidden"></div>
+
+    <!-- More menu -->
+    <section id="more-menu" class="sheet sheet-compact hidden" aria-label="More">
+      <div class="drawer-header">
+        <h2>More</h2>
+        <button class="btn-close" data-close="more-menu" aria-label="Close">&times;</button>
+      </div>
+      <div class="more-menu-list">
+        <button id="btn-replan" class="more-menu-item">Something changed&hellip;</button>
+        <button id="btn-prepare-year" class="more-menu-item">Prepare next year&hellip;</button>
+        <button id="btn-theme" class="more-menu-item">Toggle light / dark</button>
+      </div>
+    </section>
 
     <!-- Quick-add bar -->
     <section id="quick-add" class="sheet hidden" aria-label="Add event">
@@ -118,6 +137,22 @@
         </div>
       </div>
     </section>
+
+    <!-- Alfred: conversation history panel, floats above the docked bar -->
+    <section id="alfred-panel" class="alfred-panel hidden" aria-label="Alfred conversation">
+      <div class="alfred-panel-header">
+        <span>Alfred</span>
+        <button id="alfred-collapse" class="btn-close" aria-label="Collapse">&times;</button>
+      </div>
+      <div id="alfred-messages"></div>
+    </section>
+
+    <!-- Alfred: persistent bottom-docked widget, present on every view -->
+    <div id="alfred-bar">
+      <button id="alfred-mic" class="alfred-mic" aria-label="Speak to Alfred" title="Speak to Alfred">&#127908;</button>
+      <input id="alfred-input" type="text" placeholder="Ask Alfred&hellip;" autocomplete="off" />
+      <button id="alfred-send" class="alfred-send" aria-label="Send to Alfred" title="Send">&#10148;</button>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>

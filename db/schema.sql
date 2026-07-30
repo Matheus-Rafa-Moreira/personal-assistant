@@ -21,9 +21,9 @@ CREATE TABLE IF NOT EXISTS events (
   contact_phone TEXT,
   notion_url TEXT,
   source TEXT DEFAULT 'app',      -- app | caldav | seed | replan
-  caldav_uid TEXT,                -- iCloud event UID when synced
-  caldav_url TEXT,                -- iCloud calendar object URL, required by CalDAV updates
-  caldav_etag TEXT,               -- iCloud ETag, required by CalDAV updates
+  caldav_uid TEXT,                -- iCloud event UID, used to upsert on read-only pull sync
+  caldav_url TEXT,                -- iCloud calendar object URL (informational, pull-only)
+  caldav_etag TEXT,               -- iCloud ETag (informational, pull-only)
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now'))
 );

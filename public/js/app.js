@@ -6,6 +6,8 @@
   let calendar;
   let currentDetail = null; // { eventId, occurrenceDate, isRecurring, raw }
   let replanState = null; // { date, proposal }
+  let activeYear = new Date().getFullYear();
+  let currentViewName = 'dayGridMonth';
 
   // ---------- helpers ----------
 
@@ -68,6 +70,10 @@
     return c ? c.color : '#6B7280';
   }
 
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
   // ---------- sheets ----------
 
   function openSheet(id) {
@@ -101,6 +107,59 @@
       .join('');
   }
 
+  // ---------- year scoping ----------
+
+  async function loadYearState() {
+    const res = await fetch('/api/year-state');
+    const data = await res.json();
+    activeYear = data.activeYear;
+  }
+
+  function yearValidRange() {
+    return { start: `${activeYear}-01-01`, end: `${activeYear + 1}-01-01` };
+  }
+
+  async function prepareNextYear() {
+    if (!window.confirm(`Carry recurring events from ${activeYear} into ${activeYear + 1}? You'll be able to review and edit them afterward (new reading weeks / exceptions, etc.).`)) {
+      return;
+    }
+    const res = await fetch('/api/year-state/carry-forward', { method: 'POST' });
+    const data = await res.json();
+    activeYear = data.toYear;
+    calendar.setOption('validRange', yearValidRange());
+    calendar.refetchEvents();
+    window.alert(`Copied ${data.created.length} recurring event template(s) into ${data.toYear}. Review them in Month or Year view and adjust exceptions as needed.`);
+  }
+
+  // ---------- nav bar ----------
+
+  function setActiveViewButton(view) {
+    for (const btn of document.querySelectorAll('#view-switch button')) {
+      btn.classList.toggle('active', btn.dataset.view === view);
+    }
+  }
+
+  function updateNavBar() {
+    const titleEl = document.getElementById('nav-title');
+    const upBtn = document.getElementById('nav-up');
+    if (currentViewName === 'multiMonthYear') {
+      titleEl.textContent = String(activeYear);
+      upBtn.classList.add('hidden');
+    } else {
+      titleEl.textContent = calendar.view ? calendar.view.title : '';
+      upBtn.textContent = `‹ ${activeYear}`;
+      upBtn.classList.remove('hidden');
+    }
+  }
+
+  function changeView(view, date) {
+    currentViewName = view;
+    if (date) calendar.changeView(view, date);
+    else calendar.changeView(view);
+    setActiveViewButton(view);
+    updateNavBar();
+  }
+
   // ---------- calendar ----------
 
   function initCalendar() {
@@ -110,6 +169,10 @@
       headerToolbar: false,
       height: '100%',
       firstDay: 0,
+      validRange: yearValidRange(),
+      navLinks: true,
+      dayMaxEvents: true,
+      eventTimeFormat: { hour: 'numeric', minute: '2-digit', meridiem: 'short' },
       events: async (fetchInfo, successCallback, failureCallback) => {
         try {
           const start = toApiDatetime(fetchInfo.start);
@@ -132,14 +195,15 @@
         }
       },
       eventClick: (info) => openDetail(info.event.extendedProps),
+      dateClick: (info) => {
+        if (currentViewName === 'multiMonthYear') changeView('dayGridMonth', info.date);
+      },
+      navLinkDayClick: (date) => changeView('timeGridDay', date),
+      navLinkWeekClick: (weekStart) => changeView('timeGridWeek', weekStart),
+      datesSet: () => updateNavBar(),
     });
     calendar.render();
-  }
-
-  function setActiveViewButton(view) {
-    for (const btn of document.querySelectorAll('#view-switch button')) {
-      btn.classList.toggle('active', btn.dataset.view === view);
-    }
+    updateNavBar();
   }
 
   // ---------- quick add ----------
@@ -400,21 +464,155 @@
       const next = current === 'dark' ? 'light' : 'dark';
       document.documentElement.dataset.theme = next;
       localStorage.setItem('theme', next);
+      closeSheet('more-menu');
+    });
+  }
+
+  // ---------- Alfred ----------
+
+  let alfredMessages = []; // {role: 'user'|'assistant', content}
+  let mediaRecorder = null;
+  let audioChunks = [];
+  let recording = false;
+
+  function renderAlfredMessages() {
+    const el = document.getElementById('alfred-messages');
+    el.innerHTML = alfredMessages
+      .map((m) => `<div class="alfred-msg alfred-${m.role}">${escapeHtml(m.content)}</div>`)
+      .join('');
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function openAlfredPanel() {
+    document.getElementById('alfred-panel').classList.remove('hidden');
+  }
+
+  function toggleAlfredPanel() {
+    document.getElementById('alfred-panel').classList.toggle('hidden');
+  }
+
+  function speak(text) {
+    if (!text || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.0;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  async function sendAlfredText(rawText, wasVoice) {
+    const text = rawText.trim();
+    if (!text) return;
+
+    openAlfredPanel();
+    alfredMessages.push({ role: 'user', content: text });
+    renderAlfredMessages();
+    document.getElementById('alfred-input').value = '';
+
+    try {
+      const res = await fetch('/api/alfred/chat', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ messages: alfredMessages.map((m) => ({ role: m.role, content: m.content })) }),
+      });
+      const data = await res.json();
+      const reply = data.reply || "Sorry, I didn't catch that.";
+      alfredMessages.push({ role: 'assistant', content: reply });
+      renderAlfredMessages();
+      if (wasVoice) speak(reply);
+
+      const wroteSomething = (data.actions || []).some((a) => a.result && a.result.ok);
+      if (wroteSomething) calendar.refetchEvents();
+    } catch (err) {
+      const reply = 'Sorry, something went wrong reaching Alfred.';
+      alfredMessages.push({ role: 'assistant', content: reply });
+      renderAlfredMessages();
+      if (wasVoice) speak(reply);
+    }
+  }
+
+  async function startVoiceInput() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      window.alert('Voice input needs microphone access, which this browser does not support here.');
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunks = [];
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.addEventListener('dataavailable', (e) => audioChunks.push(e.data));
+      mediaRecorder.addEventListener('stop', async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        document.getElementById('alfred-mic').classList.remove('recording');
+        const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+        try {
+          const res = await fetch('/api/alfred/transcribe', {
+            method: 'POST',
+            headers: { 'content-type': blob.type },
+            body: blob,
+          });
+          const { text } = await res.json();
+          if (text) await sendAlfredText(text, true);
+        } catch (err) {
+          window.alert('Could not transcribe that — try again.');
+        }
+      });
+      mediaRecorder.start();
+      document.getElementById('alfred-mic').classList.add('recording');
+    } catch (err) {
+      window.alert('Microphone permission is needed for voice input.');
+      recording = false;
+    }
+  }
+
+  function stopVoiceInput() {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+  }
+
+  function initAlfred() {
+    const bar = document.getElementById('alfred-bar');
+    const input = document.getElementById('alfred-input');
+    const mic = document.getElementById('alfred-mic');
+    const send = document.getElementById('alfred-send');
+
+    bar.addEventListener('click', (e) => {
+      if (e.target === bar) toggleAlfredPanel();
+    });
+
+    send.addEventListener('click', () => sendAlfredText(input.value, false));
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendAlfredText(input.value, false);
+    });
+    input.addEventListener('focus', openAlfredPanel);
+
+    mic.addEventListener('click', () => {
+      recording = !recording;
+      if (recording) startVoiceInput();
+      else stopVoiceInput();
+    });
+
+    document.getElementById('alfred-collapse').addEventListener('click', () => {
+      document.getElementById('alfred-panel').classList.add('hidden');
     });
   }
 
   // ---------- wire up ----------
 
   function init() {
-    loadCategories().then(initCalendar);
+    Promise.all([loadCategories(), loadYearState()]).then(initCalendar);
     initTheme();
+    initAlfred();
 
     document.getElementById('view-switch').addEventListener('click', (e) => {
       const btn = e.target.closest('button[data-view]');
       if (!btn) return;
-      calendar.changeView(btn.dataset.view);
-      setActiveViewButton(btn.dataset.view);
+      changeView(btn.dataset.view);
     });
+
+    document.getElementById('nav-up').addEventListener('click', () => changeView('multiMonthYear'));
+    document.getElementById('nav-prev').addEventListener('click', () => calendar.prev());
+    document.getElementById('nav-next').addEventListener('click', () => calendar.next());
+
+    document.getElementById('btn-more').addEventListener('click', () => openSheet('more-menu'));
 
     document.getElementById('btn-add').addEventListener('click', openQuickAdd);
     document.getElementById('quick-add-form').addEventListener('submit', submitQuickAdd);
@@ -425,6 +623,7 @@
     document.getElementById('btn-replan').addEventListener('click', () => {
       resetReplanPanel();
       document.getElementById('replan-date').value = todayDateStr();
+      closeSheet('more-menu');
       openSheet('replan-panel');
     });
     document.getElementById('replan-submit').addEventListener('click', submitReplan);
@@ -432,6 +631,11 @@
     document.getElementById('replan-cancel').addEventListener('click', () => {
       resetReplanPanel();
       closeAllSheets();
+    });
+
+    document.getElementById('btn-prepare-year').addEventListener('click', () => {
+      closeSheet('more-menu');
+      prepareNextYear();
     });
 
     document.querySelectorAll('[data-close]').forEach((btn) => {
