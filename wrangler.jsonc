@@ -1,0 +1,15 @@
+{
+  "name": "personal-assistant",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-07-01",
+  "assets": { "directory": "public", "binding": "ASSETS" },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "personal-assistant-db",
+      "database_id": "159ee2e4-308f-4d16-a557-921a14a1356c" }
+  ],
+  "routes": [
+    { "pattern": "matthew-r-moreira-mypersonallifeassistant.ca", "custom_domain": true }
+  ],
+  "triggers": { "crons": ["*/30 * * * *"] },
+  "vars": { "OPENAI_MODEL": "gpt-5-mini", "TIMEZONE": "America/Toronto" }
+}
