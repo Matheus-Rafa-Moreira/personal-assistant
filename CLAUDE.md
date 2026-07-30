@@ -56,8 +56,10 @@ inserting slack." Use OPENAI_MODEL, max_tokens ~1200, temperature 0.3.
 
 ## Data notes
 - Timetable seeded from UofT ACORN Fall 2026 (see db/seed.sql). H1 F courses end
-  ~2026-12-08; MAT133Y1 is full-year (until ~2027-04-09). TODO Matt: confirm
-  reading week + winter break EXDATEs.
+  ~2026-12-08; MAT133Y1 is full-year (until ~2027-04-09). EXDATEs applied for
+  fall reading week (Oct 26-30 2026), winter closure (Dec 24 2026-Jan 5 2027),
+  and winter reading week (Feb 15-19 2027) per UTSC/KPE sessional dates —
+  worth a quick cross-check against ACORN for section-specific exceptions.
 - Notion manuals are LINKED not copied (notion_url on events). Live Notion sync = v2.
 - Apple Notes: Shortcuts automation POSTs to /api/notes-inbox hourly
   (calendar-event trigger workaround). Recipe in README.

@@ -11,22 +11,28 @@ INSERT INTO categories (id,name,color,is_slack) VALUES
 
 -- ===== School (ACORN Fall 2026; colors match ACORN) =====
 -- H1 F courses run ~2026-09-08 .. 2026-12-08. MAT133Y1 is FULL YEAR (~2027-04-09).
--- TODO(Matt): confirm fall reading week + winter break EXDATEs.
-INSERT INTO events (title,category_id,color_override,start,"end",rrule,location,description,source) VALUES
+-- EXDATEs below = fall reading week (Oct 26-30 2026), winter closure (Dec 24
+-- 2026 - Jan 5 2027), winter reading week (Feb 15-19 2027), per UTSC/KPE
+-- 2026-27 sessional dates. Worth double-checking against ACORN for exceptions.
+INSERT INTO events (title,category_id,color_override,start,"end",rrule,exdates,location,description,source) VALUES
  ('MAT133Y1 LEC 0501','1','#1B9E77','2026-09-09T13:00:00','2026-09-09T14:00:00',
-  'FREQ=WEEKLY;BYDAY=MO,WE,FR;UNTIL=20270409T235959','OI 2212','Calculus & Linear Algebra (full year)','seed'),
+  'FREQ=WEEKLY;BYDAY=MO,WE,FR;UNTIL=20270409T235959',
+  '["2026-10-26","2026-10-28","2026-10-30","2026-12-25","2026-12-28","2026-12-30","2027-01-01","2027-01-04","2027-02-15","2027-02-17","2027-02-19"]',
+  'OI 2212','Calculus & Linear Algebra (full year)','seed'),
  ('MAT133Y1 TUT 1201','1','#1B9E77','2026-09-11T12:00:00','2026-09-11T13:00:00',
-  'FREQ=WEEKLY;BYDAY=FR;UNTIL=20270409T235959','OI 8280','Weekly tutorial','seed'),
+  'FREQ=WEEKLY;BYDAY=FR;UNTIL=20270409T235959',
+  '["2026-10-30","2026-12-25","2027-01-01","2027-02-19"]',
+  'OI 8280','Weekly tutorial','seed'),
  ('ECO101H1 LEC 0301','1','#7C4DFF','2026-09-08T13:00:00','2026-09-08T15:00:00',
-  'FREQ=WEEKLY;BYDAY=TU;UNTIL=20261208T235959','OI G162','Intro Economics (fall)','seed'),
+  'FREQ=WEEKLY;BYDAY=TU;UNTIL=20261208T235959','["2026-10-27"]','OI G162','Intro Economics (fall)','seed'),
  ('ECO101H1 TUT 1701','1','#7C4DFF','2026-09-11T10:00:00','2026-09-11T11:00:00',
-  'FREQ=WEEKLY;BYDAY=FR;UNTIL=20261208T235959','SS 1070','Weekly tutorial','seed'),
+  'FREQ=WEEKLY;BYDAY=FR;UNTIL=20261208T235959','["2026-10-30"]','SS 1070','Weekly tutorial','seed'),
  ('RSM100H1 LEC 0101','1','#D81B60','2026-09-08T11:00:00','2026-09-08T13:00:00',
-  'FREQ=WEEKLY;BYDAY=TU;UNTIL=20261208T235959','OI G162','Intro to Management (fall)','seed'),
+  'FREQ=WEEKLY;BYDAY=TU;UNTIL=20261208T235959','["2026-10-27"]','OI G162','Intro to Management (fall)','seed'),
  ('PRT101H1 LEC 5101 (Mon)','1','#D95F0F','2026-09-14T17:00:00','2026-09-14T19:00:00',
-  'FREQ=WEEKLY;BYDAY=MO;UNTIL=20261208T235959','NF 113','Portuguese (fall)','seed'),
+  'FREQ=WEEKLY;BYDAY=MO;UNTIL=20261208T235959','["2026-10-26"]','NF 113','Portuguese (fall)','seed'),
  ('PRT101H1 LEC 5101 (Wed)','1','#D95F0F','2026-09-09T17:00:00','2026-09-09T19:00:00',
-  'FREQ=WEEKLY;BYDAY=WE;UNTIL=20261208T235959','NF 006','Portuguese (fall)','seed');
+  'FREQ=WEEKLY;BYDAY=WE;UNTIL=20261208T235959','["2026-10-28"]','NF 006','Portuguese (fall)','seed');
 
 -- ===== Routines (PLACEHOLDERS — Matt adjusts times/steps in app) =====
 INSERT INTO events (title,category_id,start,"end",rrule,description,steps,source) VALUES
