@@ -164,7 +164,10 @@ export default {
 
       return env.ASSETS.fetch(request);
     } catch (err) {
-      return json({ error: err.message || 'internal error' }, 500);
+      const message = err.message || 'internal error';
+      // reply included so the Alfred widget surfaces real failures
+      // instead of masking them as "Sorry, I didn't catch that."
+      return json({ error: message, reply: `⚠️ Alfred hit a backend error: ${message}` }, 500);
     }
   },
 

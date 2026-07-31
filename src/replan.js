@@ -23,8 +23,7 @@ export async function runReplan(env, occurrences, disruption) {
     },
     body: JSON.stringify({
       model: env.OPENAI_MODEL,
-      temperature: 0.3,
-      max_tokens: 1200,
+      max_completion_tokens: 1200,
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },

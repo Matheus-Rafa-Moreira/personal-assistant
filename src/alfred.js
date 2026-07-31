@@ -270,7 +270,6 @@ export async function runAlfredChat(env, messages) {
       },
       body: JSON.stringify({
         model: env.OPENAI_MODEL,
-        temperature: 0.3,
         messages: convo,
         tools: TOOLS,
       }),
