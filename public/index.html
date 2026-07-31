@@ -16,15 +16,17 @@
 <body>
   <div id="app">
     <header id="app-header">
-      <button id="nav-up" class="nav-back">&lsaquo; Year</button>
-      <div class="nav-center">
+      <div class="chrome-row-top">
+        <button id="nav-up" class="nav-back">&lsaquo; Year</button>
+        <div class="header-actions">
+          <button id="btn-more" class="btn-icon" title="More" aria-label="More">&#8943;</button>
+          <button id="btn-add" class="btn-icon-plus" aria-label="Add event">+</button>
+        </div>
+      </div>
+      <div class="chrome-row-title">
         <button id="nav-prev" class="nav-chevron" aria-label="Previous">&lsaquo;</button>
         <h1 id="nav-title">Month</h1>
         <button id="nav-next" class="nav-chevron" aria-label="Next">&rsaquo;</button>
-      </div>
-      <div class="header-actions">
-        <button id="btn-more" class="btn-icon" title="More" aria-label="More">&#8943;</button>
-        <button id="btn-add" class="btn-icon-plus" aria-label="Add event">+</button>
       </div>
     </header>
 
@@ -39,6 +41,7 @@
     <div id="legend" class="legend"></div>
 
     <main id="calendar"></main>
+    <div id="month-day-list" class="month-day-list hidden"></div>
 
     <div id="scrim" class="scrim hidden"></div>
 
@@ -52,6 +55,7 @@
         <button id="btn-replan" class="more-menu-item">Something changed&hellip;</button>
         <button id="btn-prepare-year" class="more-menu-item">Prepare next year&hellip;</button>
         <button id="btn-sync-source" class="more-menu-item">Sync source&hellip;</button>
+        <button id="btn-sync-now" class="more-menu-item">Sync now</button>
         <button id="btn-theme" class="more-menu-item">Toggle light / dark</button>
       </div>
     </section>
@@ -71,13 +75,21 @@
       <form id="quick-add-form">
         <h2>New event</h2>
         <input type="text" id="qa-title" placeholder="What's happening?" required autocomplete="off" />
+
+        <div class="qa-chip-row" id="qa-when-chips">
+          <button type="button" class="qa-chip" data-when="today">Today</button>
+          <button type="button" class="qa-chip" data-when="tomorrow">Tomorrow</button>
+          <button type="button" class="qa-chip" data-when="weekend">This weekend</button>
+        </div>
+
         <div class="qa-row">
           <label>Start <input type="datetime-local" id="qa-start" required /></label>
           <label>End <input type="datetime-local" id="qa-end" required /></label>
         </div>
-        <div class="qa-row">
-          <label class="grow">Category <select id="qa-category"></select></label>
-        </div>
+
+        <div class="qa-chip-row" id="qa-category-chips"></div>
+        <select id="qa-category" class="hidden"></select>
+
         <div class="qa-row">
           <label class="grow">Repeats
             <select id="qa-repeat">
@@ -305,12 +317,22 @@
 
     <!-- Alfred: persistent bottom-docked widget, present on every view -->
     <div id="alfred-bar">
-      <div class="alfred-avatar-badge" aria-hidden="true">
-        <svg class="alfred-avatar" viewBox="0 0 24 24"><path d="M2 8l7 4-7 4V8zm20 0l-7 4 7 4V8zM9 12h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/></svg>
+      <div class="alfred-bar-default">
+        <div class="alfred-avatar-badge" aria-hidden="true">
+          <svg class="alfred-avatar" viewBox="0 0 24 24"><path d="M2 8l7 4-7 4V8zm20 0l-7 4 7 4V8zM9 12h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/></svg>
+        </div>
+        <button id="alfred-mic" class="alfred-mic" aria-label="Speak to Alfred" title="Speak to Alfred">&#127908;</button>
+        <input id="alfred-input" type="text" placeholder="Ask Alfred&hellip;" autocomplete="off" />
+        <button id="alfred-send" class="alfred-send" aria-label="Send to Alfred" title="Send">&#10148;</button>
       </div>
-      <button id="alfred-mic" class="alfred-mic" aria-label="Speak to Alfred" title="Speak to Alfred">&#127908;</button>
-      <input id="alfred-input" type="text" placeholder="Ask Alfred&hellip;" autocomplete="off" />
-      <button id="alfred-send" class="alfred-send" aria-label="Send to Alfred" title="Send">&#10148;</button>
+      <div class="alfred-bar-listening hidden">
+        <span class="alfred-stop-badge" aria-hidden="true">&#9679;</span>
+        <div class="alfred-waveform" aria-hidden="true">
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        </div>
+        <span class="alfred-listening-label">Listening&hellip;</span>
+        <button id="alfred-stop" class="alfred-stop-btn" type="button">Stop</button>
+      </div>
     </div>
   </div>
 

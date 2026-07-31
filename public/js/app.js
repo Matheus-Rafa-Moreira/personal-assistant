@@ -8,6 +8,8 @@
   let replanState = null; // { date, proposal }
   let activeYear = new Date().getFullYear();
   let currentViewName = 'dayGridMonth';
+  let lastOccurrences = []; // raw occurrences from the most recent /api/events fetch
+  let selectedDate = null; // YYYY-MM-DD selected in month view's day list
 
   // ---------- helpers ----------
 
@@ -108,6 +110,24 @@
     legend.innerHTML = categories
       .map((c) => `<span class="legend-item"><i style="background:${c.color}"></i>${c.name}</span>`)
       .join('');
+
+    const chips = document.getElementById('qa-category-chips');
+    chips.innerHTML = categories
+      .map(
+        (c) =>
+          `<button type="button" class="qa-chip" data-category-id="${c.id}"><span class="qa-chip-dot" style="background:${c.color}"></span>${escapeHtml(c.name)}</button>`
+      )
+      .join('');
+    chips.querySelectorAll('[data-category-id]').forEach((btn) => {
+      btn.addEventListener('click', () => selectCategoryChip(btn.dataset.categoryId));
+    });
+  }
+
+  function selectCategoryChip(categoryId) {
+    document.getElementById('qa-category').value = categoryId;
+    document.querySelectorAll('#qa-category-chips .qa-chip').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.categoryId === String(categoryId));
+    });
   }
 
   // ---------- year scoping ----------
@@ -161,6 +181,8 @@
     else calendar.changeView(view);
     setActiveViewButton(view);
     updateNavBar();
+    if (view === 'dayGridMonth') showMonthDayList();
+    else hideMonthDayList();
   }
 
   // ---------- calendar ----------
@@ -182,6 +204,7 @@
           const end = toApiDatetime(fetchInfo.end);
           const res = await fetch(`/api/events?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
           const occurrences = await res.json();
+          lastOccurrences = occurrences;
           successCallback(
             occurrences.map((occ) => ({
               id: occ.id,
@@ -193,13 +216,28 @@
               extendedProps: occ,
             }))
           );
+          if (currentViewName === 'dayGridMonth' && selectedDate) renderDayList(selectedDate);
         } catch (err) {
           failureCallback(err);
         }
       },
+      eventContent: (arg) => {
+        // Month view: a small category-color dot instead of a text chip (the
+        // day's actual events are surfaced in the selected-day list below).
+        if (arg.view.type !== 'dayGridMonth') return undefined;
+        const dot = document.createElement('span');
+        dot.className = 'month-dot';
+        dot.style.background = arg.event.backgroundColor;
+        return { domNodes: [dot] };
+      },
       eventClick: (info) => openDetail(info.event.extendedProps),
       dateClick: (info) => {
-        if (currentViewName === 'multiMonthYear') changeView('dayGridMonth', info.date);
+        if (currentViewName === 'multiMonthYear') {
+          changeView('dayGridMonth', info.date);
+        } else if (currentViewName === 'dayGridMonth') {
+          selectedDate = toInputValue(info.date).slice(0, 10);
+          renderDayList(selectedDate);
+        }
       },
       navLinkDayClick: (date) => changeView('timeGridDay', date),
       navLinkWeekClick: (weekStart) => changeView('timeGridWeek', weekStart),
@@ -207,31 +245,149 @@
     });
     calendar.render();
     updateNavBar();
+    showMonthDayList();
+  }
+
+  // ---------- month view: selected-day list ----------
+
+  function formatTime(iso) {
+    const d = new Date(iso.replace(/Z$/, ''));
+    return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  }
+
+  function renderDayList(dateStr) {
+    const list = document.getElementById('month-day-list');
+    if (list.classList.contains('hidden')) return;
+
+    const dayOccs = lastOccurrences
+      .filter((o) => o.occurrenceDate === dateStr)
+      .sort((a, b) => a.start.localeCompare(b.start));
+
+    const d = new Date(`${dateStr}T00:00:00`);
+    const headLabel = d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+    const countLabel = dayOccs.length === 1 ? '1 event' : `${dayOccs.length} events`;
+
+    const rows = dayOccs
+      .map((occ, i) => {
+        const color = occ.colorOverride || categoryColor(occ.categoryId);
+        const cat = categoriesById.get(occ.categoryId);
+        return `
+      <div class="day-list-row" data-row-index="${i}">
+        <div class="day-list-time">${formatTime(occ.start)}</div>
+        <div class="day-list-accent" style="background:${color}"></div>
+        <div class="day-list-body">
+          <div class="day-list-title">${escapeHtml(occ.title)}</div>
+          <div class="day-list-sub">${escapeHtml(cat ? cat.name : '')}</div>
+        </div>
+      </div>`;
+      })
+      .join('');
+
+    list.innerHTML = `
+      <div class="day-list-header"><span>${headLabel}</span><span class="muted">${countLabel}</span></div>
+      ${dayOccs.length ? rows : '<div class="day-list-empty">No events — tap + to add one</div>'}`;
+
+    list.querySelectorAll('[data-row-index]').forEach((row) => {
+      row.addEventListener('click', () => openDetail(dayOccs[Number(row.dataset.rowIndex)]));
+    });
+  }
+
+  function showMonthDayList() {
+    document.getElementById('month-day-list').classList.remove('hidden');
+    calendar.setOption('height', 'auto');
+    if (!selectedDate) selectedDate = todayDateStr();
+    renderDayList(selectedDate);
+  }
+
+  function hideMonthDayList() {
+    document.getElementById('month-day-list').classList.add('hidden');
+    calendar.setOption('height', '100%');
   }
 
   // ---------- quick add ----------
 
+  const LAST_CATEGORY_KEY = 'lastUsedCategoryId';
+
+  // Defaults per the design's "quick-add in three taps": the day already
+  // selected in month view (if any), and the last category used — so the
+  // happy path is +, type, Add.
   function openQuickAdd() {
-    const start = new Date();
-    start.setSeconds(0, 0);
-    start.setMinutes(Math.ceil(start.getMinutes() / 5) * 5);
+    const now = new Date();
+    now.setSeconds(0, 0);
+    now.setMinutes(Math.ceil(now.getMinutes() / 5) * 5);
+
+    const start = new Date(now);
+    if (currentViewName === 'dayGridMonth' && selectedDate) {
+      const [y, m, d] = selectedDate.split('-').map(Number);
+      start.setFullYear(y, m - 1, d);
+    }
     const end = new Date(start.getTime() + 30 * 60000);
 
     document.getElementById('qa-title').value = '';
     document.getElementById('qa-start').value = toInputValue(start);
     document.getElementById('qa-end').value = toInputValue(end);
     document.getElementById('qa-repeat').value = '';
+
+    setActiveWhenChip(toInputValue(start).slice(0, 10));
+
+    const lastCategoryId = localStorage.getItem(LAST_CATEGORY_KEY);
+    const defaultCategory = categories.find((c) => String(c.id) === lastCategoryId) || categories[0];
+    if (defaultCategory) selectCategoryChip(defaultCategory.id);
+
     openSheet('quick-add');
     document.getElementById('qa-title').focus();
   }
 
+  function dateStrFor(daysFromToday) {
+    const d = new Date();
+    d.setDate(d.getDate() + daysFromToday);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
+  function nextSaturdayDateStr() {
+    const d = new Date();
+    const daysUntilSat = (6 - d.getDay() + 7) % 7 || 7;
+    d.setDate(d.getDate() + daysUntilSat);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
+  function setActiveWhenChip(dateStr) {
+    const map = { today: dateStrFor(0), tomorrow: dateStrFor(1), weekend: nextSaturdayDateStr() };
+    document.querySelectorAll('#qa-when-chips .qa-chip').forEach((btn) => {
+      btn.classList.toggle('active', map[btn.dataset.when] === dateStr);
+    });
+  }
+
+  function applyWhenChip(when) {
+    const targetDateStr = when === 'today' ? dateStrFor(0) : when === 'tomorrow' ? dateStrFor(1) : nextSaturdayDateStr();
+    const [y, m, d] = targetDateStr.split('-').map(Number);
+
+    const startInput = document.getElementById('qa-start');
+    const endInput = document.getElementById('qa-end');
+    const start = new Date(fromInputValue(startInput.value));
+    const durationMs = new Date(fromInputValue(endInput.value)) - start;
+    start.setFullYear(y, m - 1, d);
+    const end = new Date(start.getTime() + durationMs);
+
+    startInput.value = toInputValue(start);
+    endInput.value = toInputValue(end);
+    setActiveWhenChip(targetDateStr);
+  }
+
+  function initQuickAddChips() {
+    document.querySelectorAll('#qa-when-chips .qa-chip').forEach((btn) => {
+      btn.addEventListener('click', () => applyWhenChip(btn.dataset.when));
+    });
+  }
+
   async function submitQuickAdd(evt) {
     evt.preventDefault();
+    const categoryId = Number(document.getElementById('qa-category').value);
     const body = {
       title: document.getElementById('qa-title').value.trim(),
       start: fromInputValue(document.getElementById('qa-start').value),
       end: fromInputValue(document.getElementById('qa-end').value),
-      categoryId: Number(document.getElementById('qa-category').value),
+      categoryId,
       rrule: document.getElementById('qa-repeat').value || null,
     };
     if (!body.title) return;
@@ -241,6 +397,7 @@
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
     });
+    localStorage.setItem(LAST_CATEGORY_KEY, String(categoryId));
 
     closeSheet('quick-add');
     calendar.refetchEvents();
@@ -705,6 +862,29 @@
     window.alert(`Sync source set to "${name}". The next sync cycle will pull from it.`);
   }
 
+  // Manual trigger for the read-only CalDAV pull, so a sync-source change (or
+  // the whole family-sync setup) can be verified immediately instead of
+  // waiting for the next :00/:30 cron tick.
+  async function syncNow(btn) {
+    const originalLabel = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Syncing…';
+    try {
+      const res = await fetch('/api/sync/caldav', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `request failed (${res.status})`);
+      closeSheet('more-menu');
+      const { inserted, updated } = data.pull || {};
+      window.alert(`Synced: ${inserted ?? 0} new, ${updated ?? 0} updated.`);
+      calendar.refetchEvents();
+    } catch (err) {
+      window.alert(`Sync failed: ${err.message}`);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+    }
+  }
+
   // ---------- theme ----------
 
   function initTheme() {
@@ -783,6 +963,12 @@
     }
   }
 
+  function setListeningUI(isListening) {
+    document.querySelector('.alfred-bar-default').classList.toggle('hidden', isListening);
+    document.querySelector('.alfred-bar-listening').classList.toggle('hidden', !isListening);
+    document.getElementById('alfred-mic').classList.toggle('recording', isListening);
+  }
+
   async function startVoiceInput() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       window.alert('Voice input needs microphone access, which this browser does not support here.');
@@ -795,7 +981,8 @@
       mediaRecorder.addEventListener('dataavailable', (e) => audioChunks.push(e.data));
       mediaRecorder.addEventListener('stop', async () => {
         stream.getTracks().forEach((t) => t.stop());
-        document.getElementById('alfred-mic').classList.remove('recording');
+        recording = false;
+        setListeningUI(false);
         const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
         try {
           const res = await fetch('/api/alfred/transcribe', {
@@ -811,10 +998,12 @@
         }
       });
       mediaRecorder.start();
-      document.getElementById('alfred-mic').classList.add('recording');
+      recording = true;
+      setListeningUI(true);
     } catch (err) {
       window.alert('Microphone permission is needed for voice input.');
       recording = false;
+      setListeningUI(false);
     }
   }
 
@@ -839,10 +1028,11 @@
     input.addEventListener('focus', openAlfredPanel);
 
     mic.addEventListener('click', () => {
-      recording = !recording;
-      if (recording) startVoiceInput();
-      else stopVoiceInput();
+      if (recording) stopVoiceInput();
+      else startVoiceInput();
     });
+
+    document.getElementById('alfred-stop').addEventListener('click', stopVoiceInput);
 
     document.getElementById('alfred-collapse').addEventListener('click', () => {
       document.getElementById('alfred-panel').classList.add('hidden');
@@ -856,6 +1046,7 @@
     initTheme();
     initAlfred();
     initDetailSections();
+    initQuickAddChips();
 
     document.getElementById('view-switch').addEventListener('click', (e) => {
       const btn = e.target.closest('button[data-view]');
@@ -894,6 +1085,7 @@
     });
 
     document.getElementById('btn-sync-source').addEventListener('click', openSyncSourcePanel);
+    document.getElementById('btn-sync-now').addEventListener('click', (e) => syncNow(e.currentTarget));
 
     document.querySelectorAll('[data-close]').forEach((btn) => {
       btn.addEventListener('click', () => closeSheet(btn.dataset.close));
