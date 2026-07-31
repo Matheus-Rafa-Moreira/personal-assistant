@@ -273,13 +273,28 @@ button { font: inherit; }
 /* Month view: dots instead of text chips (design refinement — six events a
    day makes text chips noisy at this cell width; a day's events are surfaced
    below in the selected-day list instead). Capped per day by dayMaxEvents. */
-.fc-daygrid-event-harness { display: flex; justify-content: center; }
+/* Lay dots out inline in a wrapping row (design's `gap:3px` dot cluster)
+   instead of FullCalendar's default one-event-per-row stacking. Harnesses
+   for deduped/suppressed events render empty domNodes, so they collapse to
+   ~0 width here rather than leaving a visible gap. */
+.fc-dayGridMonth-view .fc-daygrid-day-events {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  justify-content: center;
+  padding: 2px 2px 0 !important;
+  min-height: 0 !important;
+}
+.fc-dayGridMonth-view .fc-daygrid-event-harness {
+  width: auto;
+  flex: 0 0 auto;
+  margin: 0 !important;
+}
 .month-dot {
   width: 5.5px;
   height: 5.5px;
   border-radius: 999px;
-  display: inline-block;
-  margin: 1px 1px 0;
+  display: block;
 }
 .fc-daygrid-day.fc-day-today { background: color-mix(in srgb, var(--accent) 6%, transparent); }
 

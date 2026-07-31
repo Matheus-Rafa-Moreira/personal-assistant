@@ -10,6 +10,7 @@
   let currentViewName = 'dayGridMonth';
   let lastOccurrences = []; // raw occurrences from the most recent /api/events fetch
   let selectedDate = null; // YYYY-MM-DD selected in month view's day list
+  let monthDotState = new Map(); // dateStr -> { colors: Set, count } while month-view dots mount
 
   // ---------- helpers ----------
 
@@ -196,7 +197,10 @@
       firstDay: 0,
       validRange: yearValidRange(),
       navLinks: true,
-      dayMaxEvents: true,
+      // Unlimited: eventContent's own dedup-by-color logic caps visible dots
+      // at 4 per day, so FullCalendar's row-based "+N more" capping would
+      // just be redundant (and would count suppressed/deduped events too).
+      dayMaxEvents: false,
       eventTimeFormat: { hour: 'numeric', minute: '2-digit', meridiem: 'short' },
       events: async (fetchInfo, successCallback, failureCallback) => {
         try {
@@ -205,6 +209,7 @@
           const res = await fetch(`/api/events?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
           const occurrences = await res.json();
           lastOccurrences = occurrences;
+          monthDotState = new Map(); // reset before this batch mounts via eventContent
           successCallback(
             occurrences.map((occ) => ({
               id: occ.id,
@@ -222,12 +227,24 @@
         }
       },
       eventContent: (arg) => {
-        // Month view: a small category-color dot instead of a text chip (the
-        // day's actual events are surfaced in the selected-day list below).
-        if (arg.view.type !== 'dayGridMonth') return undefined;
+        // Month view: category-color dots instead of text chips, deduped by
+        // color and capped at 4 per day (the day's actual events are
+        // surfaced in the selected-day list below) — matches the design's
+        // own `uniq.slice(0,4)` dot logic exactly.
+        if (arg.view.type !== 'dayGridMonth') return undefined; // other views: FullCalendar's default rendering
+        const dateStr = arg.event.extendedProps.occurrenceDate;
+        const color = arg.event.backgroundColor;
+        let state = monthDotState.get(dateStr);
+        if (!state) {
+          state = { colors: new Set(), count: 0 };
+          monthDotState.set(dateStr, state);
+        }
+        if (state.count >= 4 || state.colors.has(color)) return { domNodes: [] };
+        state.colors.add(color);
+        state.count++;
         const dot = document.createElement('span');
         dot.className = 'month-dot';
-        dot.style.background = arg.event.backgroundColor;
+        dot.style.background = color;
         return { domNodes: [dot] };
       },
       eventClick: (info) => openDetail(info.event.extendedProps),
