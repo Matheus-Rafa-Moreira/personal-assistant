@@ -157,3 +157,24 @@ scoping + rollover, (4) CalDAV family-calendar fix, (5) verify cron registered.
 ## V2 DECISION LOG (2026-07-30)
 - Family calendar CalDAV sync: PULL IN ONLY (read-only import; never push).
 - Authoritative V2 spec: REFINEMENTS.md (wins over v1.1 notes above on conflict).
+
+## SESSION LOG 2026-07-31 (categories + deploy + tz fix)
+- CATEGORIES: replaced 8-cat scheme with the 14 locked categories (Academic,
+  Athletic, Fitness, Religion, Family, Languages, Business, University, Social,
+  Intelligence, Extracurriculars, Bonus, Miscellaneous, Slack/Buffer) + rainbow
+  palette. Applied LIVE via Cloudflare D1 MCP. Seed events remapped: courses->
+  Academic(1); routines+chores->Miscellaneous(13) [Matt to confirm vs Bonus];
+  buffer->Slack/Buffer(14). Frontend reads /api/categories dynamically = auto.
+  TODO: dark-mode white/gray category colors (Matt's "nocturnal" request) - CSS.
+- DEPLOYED HEAD (design refinement pass + full V3) — was committed but never
+  deployed; that's why Matt "couldn't see the changes". Versions this session:
+  756c7f18 (design+V3+cats), 3eb8adc9 (tz fix).
+- TZ FIX: caldav.js stored synced times via toNaiveISO=UTC on a UTC Worker ->
+  every synced event +offset (8:45pm shown as 00:45). Added all-day-safe
+  icalTimeToNaive() using Intl in America/Toronto; toNaiveISO left untouched
+  (recurrence engine depends on its naive round-trip). Corrected times land on
+  next sync (cron :00/:30 or in-app Sync Now).
+- OPEN: (1) Matt picks correct sync calendar via More->Sync source (many synced
+  events "don't pertain to me"); after that, bulk-categorize caldav events via
+  D1 + prune stale rows from the old calendar. (2) routines/chores category home.
+  (3) template repo (sellable/tailorable + fill-out form) still to build.
