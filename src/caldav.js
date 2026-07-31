@@ -51,7 +51,25 @@ async function getTargetCalendar(client, env) {
   return match;
 }
 
-function parseVEvent(icsData) {
+// Convert an absolute instant to a naive wall-clock ISO string in the given
+// IANA time zone. Workers run in UTC, so toISOString() alone shifted every
+// synced event by the UTC offset (e.g. an 8:45pm Toronto game saved as 00:45).
+// All-day events keep their calendar date with no zone shift.
+function pad(n, w = 2) { return String(n).padStart(w, '0'); }
+function icalTimeToNaive(icalTime, timeZone) {
+  const tz = timeZone || 'America/Toronto';
+  if (icalTime.isDate) {
+    return `${pad(icalTime.year, 4)}-${pad(icalTime.month)}-${pad(icalTime.day)}T00:00:00`;
+  }
+  const p = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  }).formatToParts(icalTime.toJSDate()).reduce((a, x) => { a[x.type] = x.value; return a; }, {});
+  const hour = p.hour === '24' ? '00' : p.hour;
+  return `${p.year}-${p.month}-${p.day}T${hour}:${p.minute}:${p.second}`;
+}
+
+function parseVEvent(icsData, timeZone) {
   const jcal = ICAL.parse(icsData);
   const comp = new ICAL.Component(jcal);
   const vevent = comp.getFirstSubcomponent('vevent');
@@ -61,8 +79,8 @@ function parseVEvent(icsData) {
   return {
     uid: ev.uid,
     title: ev.summary || '(untitled)',
-    start: toNaiveISO(ev.startDate.toJSDate()),
-    end: toNaiveISO(ev.endDate.toJSDate()),
+    start: icalTimeToNaive(ev.startDate, timeZone),
+    end: icalTimeToNaive(ev.endDate, timeZone),
     location: ev.location || null,
     description: ev.description || null,
     rrule: rruleProp ? rruleProp.toString() : null,
@@ -82,7 +100,7 @@ async function pull(env, client, calendar) {
     if (!obj.data) continue;
     let parsed;
     try {
-      parsed = parseVEvent(obj.data);
+      parsed = parseVEvent(obj.data, env.TIMEZONE || 'America/Toronto');
     } catch {
       continue; // skip events ical.js can't parse (e.g. exotic recurrence overrides)
     }
