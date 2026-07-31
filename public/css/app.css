@@ -270,6 +270,22 @@ button { font: inherit; }
 .fc-list-table td { border-color: var(--border); }
 .fc-list-day-cushion { background: var(--bg) !important; }
 
+/* "Now" line in day/week: thin red line + a red dot on the left, replacing
+   FullCalendar's default triangle-arrow marker. */
+.fc-timegrid-now-indicator-line {
+  border-color: var(--accent);
+  border-width: 1.5px 0 0;
+  z-index: 4;
+}
+.fc-timegrid-now-indicator-arrow {
+  width: 9px;
+  height: 9px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-top: -4.5px;
+}
+
 /* Month view: dots instead of text chips (design refinement — six events a
    day makes text chips noisy at this cell width; a day's events are surfaced
    below in the selected-day list instead). Capped per day by dayMaxEvents. */
@@ -390,6 +406,10 @@ button { font: inherit; }
 
 .sheet.sheet-wide { width: min(680px, 94vw); }
 .sheet.sheet-compact { width: min(300px, 88vw); padding: 14px 16px; }
+
+/* Grouped background so the new inset-grouped section cards read against it,
+   rather than disappearing into a same-color sheet. */
+#detail-drawer { background: var(--bg-grouped, var(--surface)); }
 
 .hidden { display: none !important; }
 
@@ -519,13 +539,17 @@ button { font: inherit; }
   margin-top: 12px;
   display: flex;
   flex-direction: column;
+  gap: 10px;
 }
 
+/* Inset-grouped cards per section, matching the design's drawer refinement,
+   instead of flat border-separated rows. */
 .detail-section {
-  border-top: 1px solid var(--border);
-  padding: 10px 0;
+  background: var(--bg-elev, var(--surface));
+  border-radius: var(--r-lg, 10px);
+  box-shadow: var(--sh-card, 0 1px 2px rgba(0, 0, 0, 0.06));
+  padding: 11px 14px;
 }
-.detail-section:first-child { border-top: none; }
 
 .detail-section-head {
   display: flex;

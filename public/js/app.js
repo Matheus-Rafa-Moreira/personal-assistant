@@ -197,6 +197,7 @@
       firstDay: 0,
       validRange: yearValidRange(),
       navLinks: true,
+      nowIndicator: true,
       // Unlimited: eventContent's own dedup-by-color logic caps visible dots
       // at 4 per day, so FullCalendar's row-based "+N more" capping would
       // just be redundant (and would count suppressed/deduped events too).
