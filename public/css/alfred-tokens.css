@@ -1,0 +1,105 @@
+/* ==========================================================================
+   Alfred — design tokens
+   Portable, no-build. Drop this in before your app CSS and use var(--*) only.
+   Dark mode is automatic via prefers-color-scheme; every token keeps its name.
+   ========================================================================== */
+
+:root {
+  /* Type ------------------------------------------------------------------ */
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
+  --fs-cap2: 11px;   /* month-cell chips, weekday header */
+  --fs-cap1: 12px;   /* timeline block meta */
+  --fs-foot: 13px;   /* times, secondary rows, section labels */
+  --fs-sub:  15px;   /* list row titles, fields */
+  --fs-body: 17px;   /* nav actions, sheet body */
+  --fs-t3:   20px;   /* nav title */
+  --fs-t2:   22px;   /* drawer title */
+  --fs-t1:   28px;
+  --fs-lg:   34px;   /* large title */
+  --fw-reg: 400; --fw-med: 500; --fw-semi: 600; --fw-bold: 700;
+
+  /* Spacing (4pt base) ---------------------------------------------------- */
+  --sp-1: 2px; --sp-2: 4px; --sp-3: 6px; --sp-4: 8px; --sp-5: 12px;
+  --sp-6: 16px; --sp-7: 20px; --sp-8: 24px; --sp-9: 32px; --sp-10: 44px;
+
+  /* Radii ----------------------------------------------------------------- */
+  --r-xs: 4px; --r-sm: 6px; --r-md: 8px; --r-lg: 10px; --r-xl: 14px;
+  --r-sheet: 16px; --r-pill: 999px;
+
+  /* Accent ---------------------------------------------------------------- */
+  --accent: #FF3B30;
+  --accent-press: #D93025;
+  --accent-soft: rgba(255, 59, 48, 0.12);
+  --on-accent: #FFFFFF;
+
+  /* Ground + text --------------------------------------------------------- */
+  --bg: #FFFFFF;
+  --bg-grouped: #F2F2F7;      /* sheets, list backgrounds */
+  --bg-elev: #FFFFFF;         /* cards on grouped bg */
+  --bg-chrome: rgba(249, 249, 249, 0.94); /* nav + Alfred dock, blurred */
+  --fg: #000000;
+  --fg-2: rgba(60, 60, 67, 0.60);
+  --fg-3: rgba(60, 60, 67, 0.30);
+  --fg-dim: rgba(60, 60, 67, 0.26);  /* dates outside the month */
+  --fill-1: rgba(120, 120, 128, 0.20);
+  --fill-2: rgba(120, 120, 128, 0.16);
+  --fill-3: rgba(120, 120, 128, 0.08);
+  --sep: rgba(60, 60, 67, 0.29);
+  --sep-soft: rgba(60, 60, 67, 0.12);
+  --scrim: rgba(0, 0, 0, 0.32);
+
+  /* Categories ------------------------------------------------------------ */
+  --cat-school:   #4F46E5;
+  --cat-routines: #0EA5E9;
+  --cat-health:   #EF4444;
+  --cat-chores:   #F59E0B;
+  --cat-family:   #EC4899;
+  --cat-goals:    #10B981;
+  --cat-misc:     #6B7280;
+  --cat-buffer:   #94A3B8;   /* muted by design */
+  /* Course overrides on school events */
+  --course-1: #1B9E77; --course-2: #7C4DFF; --course-3: #D81B60; --course-4: #D95F0F;
+  /* Tint used behind timed blocks: color-mix keeps one source of truth */
+  --event-tint: 14%;
+
+  /* Elevation ------------------------------------------------------------- */
+  --sh-card:  0 1px 2px rgba(0, 0, 0, 0.06);
+  --sh-pill:  0 1px 3px rgba(0, 0, 0, 0.10);
+  --sh-sheet: 0 -8px 30px rgba(0, 0, 0, 0.16);
+  --sh-dock:  0 -0.5px 0 var(--sep-soft), 0 -10px 24px rgba(0, 0, 0, 0.05);
+
+  /* Layout metrics -------------------------------------------------------- */
+  --hour-h: 44px;        /* day view row height */
+  --hour-h-week: 28px;   /* week view row height */
+  --cell-h: 64px;        /* month grid row height (phone) */
+  --cell-h-lg: 118px;    /* month grid row height (desktop) */
+  --gutter: 54px;        /* timeline hour-label column */
+  --tap: 44px;           /* minimum hit target */
+  --dock-h: 60px;        /* Alfred bar, excl. safe area */
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --accent: #FF453A;
+    --accent-press: #FF6961;
+    --accent-soft: rgba(255, 69, 58, 0.18);
+    --bg: #000000;
+    --bg-grouped: #1C1C1E;
+    --bg-elev: #2C2C2E;
+    --bg-chrome: rgba(28, 28, 30, 0.92);
+    --fg: #FFFFFF;
+    --fg-2: rgba(235, 235, 245, 0.60);
+    --fg-3: rgba(235, 235, 245, 0.30);
+    --fg-dim: rgba(235, 235, 245, 0.25);
+    --fill-1: rgba(120, 120, 128, 0.36);
+    --fill-2: rgba(120, 120, 128, 0.32);
+    --fill-3: rgba(120, 120, 128, 0.18);
+    --sep: rgba(84, 84, 88, 0.65);
+    --sep-soft: rgba(84, 84, 88, 0.40);
+    --scrim: rgba(0, 0, 0, 0.50);
+    --sh-card: 0 1px 2px rgba(0, 0, 0, 0.40);
+    --sh-sheet: 0 -8px 30px rgba(0, 0, 0, 0.50);
+    --event-tint: 26%;
+  }
+}

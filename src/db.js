@@ -233,6 +233,27 @@ export async function applyReplan(env, date, proposal) {
   return { cancelled: currentOccurrences.length, inserted: proposal.length };
 }
 
+export async function setReminder(env, eventId, occurrenceDate, occurrenceStartISO, minutesBefore) {
+  const fireAt = toNaiveISO(new Date(parseNaive(occurrenceStartISO).getTime() - minutesBefore * 60000));
+  await env.DB.prepare(
+    `INSERT INTO reminders (event_id, occurrence_date, fire_at, sent) VALUES (?, ?, ?, 0)
+     ON CONFLICT(event_id, occurrence_date) DO UPDATE SET fire_at=excluded.fire_at, sent=0`
+  )
+    .bind(eventId, occurrenceDate, fireAt)
+    .run();
+  return { ok: true, eventId, occurrenceDate, fireAt };
+}
+
+export async function savePushSubscription(env, sub) {
+  await env.DB.prepare(
+    `INSERT INTO push_subscriptions (endpoint, p256dh, auth) VALUES (?, ?, ?)
+     ON CONFLICT(endpoint) DO UPDATE SET p256dh=excluded.p256dh, auth=excluded.auth`
+  )
+    .bind(sub.endpoint, sub.p256dh, sub.auth)
+    .run();
+  return { ok: true };
+}
+
 export async function getYearState(env) {
   const row = await env.DB.prepare("SELECT value FROM sync_state WHERE key='active_year'").first();
   if (row?.value) return { activeYear: Number(row.value) };

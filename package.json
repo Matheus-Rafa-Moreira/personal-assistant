@@ -6,8 +6,10 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "db:schema": "wrangler d1 execute personal-assistant-db --remote --file db/schema.sql",
-    "db:seed": "wrangler d1 execute personal-assistant-db --remote --file db/seed.sql"
+    "db:seed": "wrangler d1 execute personal-assistant-db --remote --file db/seed.sql",
+    "db:migrate:003": "wrangler d1 execute personal-assistant-db --remote --file db/migrations/003-reminders.sql",
+    "setup:vapid": "node scripts/setup-vapid.mjs"
   },
   "dependencies": { "tsdav": "^2.1.5", "ical.js": "^2.1.0", "rrule": "^2.8.1" },
-  "devDependencies": { "wrangler": "^4" }
+  "devDependencies": { "wrangler": "^4", "web-push": "^3" }
 }

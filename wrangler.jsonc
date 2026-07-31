@@ -10,6 +10,6 @@
   "routes": [
     { "pattern": "matthew-r-moreira-mypersonallifeassistant.ca", "custom_domain": true }
   ],
-  "triggers": { "crons": ["*/30 * * * *"] },
+  "triggers": { "crons": ["*/5 * * * *"] },
   "vars": { "OPENAI_MODEL": "gpt-5-mini", "TIMEZONE": "America/Toronto" }
 }

@@ -6,9 +6,11 @@
   <title>Personal Life Assistant</title>
   <meta name="theme-color" content="#FF3B30" />
   <link rel="manifest" href="/manifest.json" />
-  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="stylesheet" href="/css/alfred-tokens.css" />
   <link rel="stylesheet" href="/css/app.css" />
 </head>
 <body>
@@ -49,8 +51,19 @@
       <div class="more-menu-list">
         <button id="btn-replan" class="more-menu-item">Something changed&hellip;</button>
         <button id="btn-prepare-year" class="more-menu-item">Prepare next year&hellip;</button>
+        <button id="btn-sync-source" class="more-menu-item">Sync source&hellip;</button>
         <button id="btn-theme" class="more-menu-item">Toggle light / dark</button>
       </div>
+    </section>
+
+    <!-- Family calendar picker (V3 #4) -->
+    <section id="sync-source-panel" class="sheet sheet-compact hidden" aria-label="Sync source">
+      <div class="drawer-header">
+        <h2>Sync source</h2>
+        <button class="btn-close" data-close="sync-source-panel" aria-label="Close">&times;</button>
+      </div>
+      <p class="muted" style="margin-top:0">Which iCloud calendar should the family view pull events from?</p>
+      <div id="sync-source-list" class="more-menu-list"></div>
     </section>
 
     <!-- Quick-add bar -->
@@ -91,17 +104,157 @@
       </div>
       <h2 id="detail-title"></h2>
       <p id="detail-time" class="muted"></p>
-      <p id="detail-repeat" class="muted hidden"></p>
-      <p id="detail-description" class="hidden"></p>
 
-      <div id="detail-steps" class="steps hidden"></div>
+      <div id="detail-sections" class="detail-sections">
+        <!-- Location -->
+        <div class="detail-section" data-field="location">
+          <div class="detail-section-head">
+            <span class="detail-section-label">Location</span>
+            <button class="detail-section-edit-btn" data-field="location">Edit</button>
+          </div>
+          <div class="detail-section-view" data-view="location"></div>
+          <div class="detail-section-form hidden" data-form="location">
+            <input type="text" data-input="location" placeholder="Address or place name" />
+            <div class="section-form-actions">
+              <button type="button" class="btn-cancel" data-cancel="location">Cancel</button>
+              <button type="button" class="btn-primary" data-save="location">Save</button>
+            </div>
+          </div>
+        </div>
 
-      <a id="detail-location" class="detail-link hidden" target="_blank" rel="noopener">&#128205; <span></span></a>
-      <a id="detail-contact" class="detail-link hidden">&#128222; <span></span></a>
-      <a id="detail-notion" class="detail-link hidden" target="_blank" rel="noopener">&#128214; Notion guide &rarr;</a>
+        <!-- Contact Info -->
+        <div class="detail-section" data-field="contact">
+          <div class="detail-section-head">
+            <span class="detail-section-label">Contact Info</span>
+            <button class="detail-section-edit-btn" data-field="contact">Edit</button>
+          </div>
+          <div class="detail-section-view" data-view="contact"></div>
+          <div class="detail-section-form hidden" data-form="contact">
+            <input type="text" data-input="contactName" placeholder="Name" />
+            <input type="tel" data-input="contactPhone" placeholder="Phone number" />
+            <div class="section-form-actions">
+              <button type="button" class="btn-cancel" data-cancel="contact">Cancel</button>
+              <button type="button" class="btn-primary" data-save="contact">Save</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Checklist / Routine -->
+        <div class="detail-section" data-field="steps">
+          <div class="detail-section-head">
+            <span class="detail-section-label">Checklist / Routine</span>
+            <button class="detail-section-edit-btn" data-field="steps">Edit</button>
+          </div>
+          <div id="detail-steps" class="steps hidden"></div>
+          <div class="detail-section-form hidden" data-form="steps">
+            <div id="detail-steps-editor"></div>
+            <div class="step-add-row">
+              <input type="text" id="detail-step-new" placeholder="Add a step&hellip;" />
+              <button type="button" id="detail-step-add" class="btn-secondary">Add</button>
+            </div>
+            <div class="section-form-actions">
+              <button type="button" class="btn-cancel" data-cancel="steps">Cancel</button>
+              <button type="button" class="btn-primary" data-save="steps">Save</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Extra Info -->
+        <div class="detail-section" data-field="description">
+          <div class="detail-section-head">
+            <span class="detail-section-label">Extra Info</span>
+            <button class="detail-section-edit-btn" data-field="description">Edit</button>
+          </div>
+          <div class="detail-section-view" data-view="description"></div>
+          <div class="detail-section-form hidden" data-form="description">
+            <textarea rows="3" data-input="description" placeholder="Notes, details&hellip;"></textarea>
+            <div class="section-form-actions">
+              <button type="button" class="btn-cancel" data-cancel="description">Cancel</button>
+              <button type="button" class="btn-primary" data-save="description">Save</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Links -->
+        <div class="detail-section" data-field="notion">
+          <div class="detail-section-head">
+            <span class="detail-section-label">Links</span>
+            <button class="detail-section-edit-btn" data-field="notion">Edit</button>
+          </div>
+          <div class="detail-section-view" data-view="notion"></div>
+          <div class="detail-section-form hidden" data-form="notion">
+            <input type="url" data-input="notionUrl" placeholder="Notion page URL" />
+            <div class="section-form-actions">
+              <button type="button" class="btn-cancel" data-cancel="notion">Cancel</button>
+              <button type="button" class="btn-primary" data-save="notion">Save</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Repeat -->
+        <div class="detail-section" data-field="repeat">
+          <div class="detail-section-head">
+            <span class="detail-section-label">Repeat</span>
+            <button class="detail-section-edit-btn" data-field="repeat">Edit</button>
+          </div>
+          <div class="detail-section-view" data-view="repeat"></div>
+          <div class="detail-section-form hidden" data-form="repeat">
+            <select data-input="rrule">
+              <option value="">Doesn't repeat</option>
+              <option value="FREQ=DAILY">Daily</option>
+              <option value="FREQ=WEEKLY">Weekly</option>
+              <option value="FREQ=WEEKLY;INTERVAL=2">Every 2 weeks</option>
+              <option value="FREQ=MONTHLY">Monthly</option>
+            </select>
+            <div class="section-form-actions">
+              <button type="button" class="btn-cancel" data-cancel="repeat">Cancel</button>
+              <button type="button" class="btn-primary" data-save="repeat">Save</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category -->
+        <div class="detail-section" data-field="category">
+          <div class="detail-section-head">
+            <span class="detail-section-label">Category</span>
+            <button class="detail-section-edit-btn" data-field="category">Edit</button>
+          </div>
+          <div class="detail-section-view" data-view="category"></div>
+          <div class="detail-section-form hidden" data-form="category">
+            <select id="detail-category-select" data-input="categoryId"></select>
+            <div class="section-form-actions">
+              <button type="button" class="btn-cancel" data-cancel="category">Cancel</button>
+              <button type="button" class="btn-primary" data-save="category">Save</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reminder (V3 #3, opt-in web push) -->
+        <div class="detail-section" data-field="reminder">
+          <div class="detail-section-head">
+            <span class="detail-section-label">Reminder</span>
+            <button class="detail-section-edit-btn" data-field="reminder">Edit</button>
+          </div>
+          <div class="detail-section-view" data-view="reminder"></div>
+          <div class="detail-section-form hidden" data-form="reminder">
+            <select data-input="reminderMinutes">
+              <option value="0">At start time</option>
+              <option value="5">5 minutes before</option>
+              <option value="15" selected>15 minutes before</option>
+              <option value="30">30 minutes before</option>
+              <option value="60">1 hour before</option>
+              <option value="1440">1 day before</option>
+            </select>
+            <div class="section-form-actions">
+              <button type="button" class="btn-cancel" data-cancel="reminder">Cancel</button>
+              <button type="button" class="btn-primary" data-save="reminder">Set reminder</button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div class="drawer-actions">
-        <button id="detail-edit" class="btn-secondary">Edit</button>
+        <button id="detail-edit" class="btn-secondary">Edit title</button>
         <button id="detail-delete" class="btn-danger">Delete</button>
       </div>
     </section>
@@ -141,7 +294,10 @@
     <!-- Alfred: conversation history panel, floats above the docked bar -->
     <section id="alfred-panel" class="alfred-panel hidden" aria-label="Alfred conversation">
       <div class="alfred-panel-header">
-        <span>Alfred</span>
+        <span class="alfred-identity">
+          <svg class="alfred-avatar" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 8l7 4-7 4V8zm20 0l-7 4 7 4V8zM9 12h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/></svg>
+          Alfred
+        </span>
         <button id="alfred-collapse" class="btn-close" aria-label="Collapse">&times;</button>
       </div>
       <div id="alfred-messages"></div>
@@ -149,6 +305,9 @@
 
     <!-- Alfred: persistent bottom-docked widget, present on every view -->
     <div id="alfred-bar">
+      <div class="alfred-avatar-badge" aria-hidden="true">
+        <svg class="alfred-avatar" viewBox="0 0 24 24"><path d="M2 8l7 4-7 4V8zm20 0l-7 4 7 4V8zM9 12h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/></svg>
+      </div>
       <button id="alfred-mic" class="alfred-mic" aria-label="Speak to Alfred" title="Speak to Alfred">&#127908;</button>
       <input id="alfred-input" type="text" placeholder="Ask Alfred&hellip;" autocomplete="off" />
       <button id="alfred-send" class="alfred-send" aria-label="Send to Alfred" title="Send">&#10148;</button>
@@ -156,6 +315,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+  <script src="/js/vapid.js"></script>
   <script src="/js/app.js"></script>
   <script>
     if ('serviceWorker' in navigator) {

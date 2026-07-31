@@ -1,12 +1,17 @@
-const CACHE_NAME = 'pla-shell-v2';
+const CACHE_NAME = 'pla-shell-v4';
 const SHELL_FILES = [
   '/',
   '/index.html',
+  '/css/alfred-tokens.css',
   '/css/app.css',
   '/js/app.js',
+  '/js/vapid.js',
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
+  '/icons/icon-1024.png',
+  '/icons/apple-touch-icon.png',
+  '/icons/favicon-32.png',
 ];
 
 self.addEventListener('install', (event) => {
@@ -39,6 +44,36 @@ self.addEventListener('fetch', (event) => {
         }
         return res;
       });
+    })
+  );
+});
+
+// V3 opt-in reminders: show the push as a notification, and focus/open the
+// app on tap so Matt lands back on the calendar.
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { title: 'Reminder', body: event.data ? event.data.text() : '' };
+  }
+  const title = data.title || 'Reminder';
+  const options = {
+    body: data.body || '',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    data: { url: '/' },
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window' }).then((clientsArr) => {
+      const existing = clientsArr.find((c) => 'focus' in c);
+      if (existing) return existing.focus();
+      return self.clients.openWindow('/');
     })
   );
 });

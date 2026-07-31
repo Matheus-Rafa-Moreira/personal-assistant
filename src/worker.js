@@ -1,5 +1,6 @@
-import { syncCalDav } from './caldav.js';
+import { syncCalDav, listCalendars, setSyncTarget } from './caldav.js';
 import { runAlfredChat, transcribeAudio } from './alfred.js';
+import { fireDueReminders } from './reminders.js';
 import {
   queryOccurrences,
   createEvent,
@@ -12,6 +13,8 @@ import {
   applyReplan,
   getYearState,
   carryYearForward,
+  setReminder,
+  savePushSubscription,
 } from './db.js';
 
 function json(data, status = 200) {
@@ -130,6 +133,32 @@ async function handleCarryForward(env) {
   return json(await carryYearForward(env));
 }
 
+async function handleListSyncCalendars(env) {
+  const calendars = await listCalendars(env);
+  return json({ calendars });
+}
+
+async function handleSetSyncTarget(request, env) {
+  const body = await request.json();
+  if (!body.name) return badRequest('name is required');
+  return json(await setSyncTarget(env, body.name));
+}
+
+async function handlePushSubscribe(request, env) {
+  const body = await request.json();
+  if (!body.endpoint || !body.p256dh || !body.auth) return badRequest('endpoint, p256dh, auth are required');
+  return json(await savePushSubscription(env, body), 201);
+}
+
+async function handleSetReminder(request, env) {
+  const body = await request.json();
+  if (!body.eventId || !body.occurrenceDate || !body.start || body.minutesBefore == null) {
+    return badRequest('eventId, occurrenceDate, start, minutesBefore are required');
+  }
+  const result = await setReminder(env, body.eventId, body.occurrenceDate, body.start, body.minutesBefore);
+  return json(result, 201);
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -160,6 +189,12 @@ export default {
       if (pathname === '/api/year-state' && method === 'GET') return await handleYearState(env);
       if (pathname === '/api/year-state/carry-forward' && method === 'POST') return await handleCarryForward(env);
 
+      if (pathname === '/api/sync/calendars' && method === 'GET') return await handleListSyncCalendars(env);
+      if (pathname === '/api/sync/target' && method === 'POST') return await handleSetSyncTarget(request, env);
+
+      if (pathname === '/api/push/subscribe' && method === 'POST') return await handlePushSubscribe(request, env);
+      if (pathname === '/api/reminders' && method === 'POST') return await handleSetReminder(request, env);
+
       if (pathname.startsWith('/api/')) return notFound();
 
       return env.ASSETS.fetch(request);
@@ -171,9 +206,13 @@ export default {
     }
   },
 
-  // CalDAV sync is READ-ONLY pull-in from the family calendar (see
-  // REFINEMENTS.md V2 decision log) — never pushes app events out.
+  // Cron runs every 5 min (V3 addendum #3) so reminders fire promptly. CalDAV
+  // sync (READ-ONLY pull-in from the family calendar — see REFINEMENTS.md V2
+  // decision log, never pushes app events out) stays gated to :00/:30 to match
+  // its old 30-min cadence and avoid hammering iCloud.
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(syncCalDav(env));
+    const minute = new Date(event.scheduledTime).getUTCMinutes();
+    if (minute % 30 === 0) ctx.waitUntil(syncCalDav(env));
+    ctx.waitUntil(fireDueReminders(env));
   },
 };

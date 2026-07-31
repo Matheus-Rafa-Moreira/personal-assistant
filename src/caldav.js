@@ -14,9 +14,35 @@ async function getClient(env) {
   });
 }
 
+// Family calendar picker (REFINEMENTS.md V3 #4): sync_state.caldav_target_calendar
+// wins when set (chosen via More menu -> "Sync source..."), falling back to the
+// CALDAV_CALENDAR_NAME secret so existing deployments keep working untouched.
+async function getTargetCalendarName(env) {
+  const row = await env.DB.prepare("SELECT value FROM sync_state WHERE key='caldav_target_calendar'").first();
+  return row?.value || env.CALDAV_CALENDAR_NAME || 'Personal Assistant';
+}
+
+export async function setSyncTarget(env, name) {
+  await env.DB.prepare(
+    `INSERT INTO sync_state (key, value) VALUES ('caldav_target_calendar', ?)
+     ON CONFLICT(key) DO UPDATE SET value=excluded.value`
+  )
+    .bind(name)
+    .run();
+  return { ok: true, target: name };
+}
+
+// Lists CalDAV calendar display names using the existing Apple ID creds, so the
+// UI can offer a picker instead of round-tripping through `wrangler secret put`.
+export async function listCalendars(env) {
+  const client = await getClient(env);
+  const calendars = await client.fetchCalendars();
+  return calendars.map((c) => ({ displayName: typeof c.displayName === 'string' ? c.displayName : String(c.displayName || '') }));
+}
+
 async function getTargetCalendar(client, env) {
   const calendars = await client.fetchCalendars();
-  const targetName = env.CALDAV_CALENDAR_NAME || 'Personal Assistant';
+  const targetName = await getTargetCalendarName(env);
   const match = calendars.find((c) => {
     const name = typeof c.displayName === 'string' ? c.displayName : '';
     return name.toLowerCase() === targetName.toLowerCase();

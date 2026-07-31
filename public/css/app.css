@@ -361,6 +361,99 @@ button { font: inherit; }
   margin-top: 18px;
 }
 
+/* ---------- structured, editable detail-drawer sections (V3 #1) ---------- */
+
+.detail-sections {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-section {
+  border-top: 1px solid var(--border);
+  padding: 10px 0;
+}
+.detail-section:first-child { border-top: none; }
+
+.detail-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.detail-section-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.detail-section-edit-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.detail-section-view {
+  margin-top: 6px;
+  cursor: pointer;
+}
+
+.section-empty { color: var(--accent); font-size: 0.85rem; }
+.section-text { margin: 0; font-size: 0.88rem; line-height: 1.4; color: var(--text); }
+
+.detail-section-form {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-section-form input,
+.detail-section-form select,
+.detail-section-form textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.88rem;
+}
+
+.section-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.step-add-row { display: flex; gap: 6px; }
+.step-add-row input { flex: 1; }
+
+.step-editor-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 0.86rem;
+  border-bottom: 1px solid var(--border);
+}
+.step-editor-row:last-child { border-bottom: none; }
+
+.step-remove {
+  background: none;
+  border: none;
+  color: var(--danger);
+  font-size: 1.1rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 4px;
+}
+
 #replan-form label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 10px; }
 #replan-submit { margin-top: 4px; }
 
@@ -456,6 +549,38 @@ button { font: inherit; }
   font-weight: 600;
   font-size: 0.85rem;
   border-bottom: 1px solid var(--border);
+}
+
+/* Alfred's mark: a small bowtie badge, per the chosen Claude Design avatar
+   concept (icons/alfred-icon-3-bowtie-v2.png) — hand-rolled here as inline SVG
+   at app scale (~26px, ~27% radius) rather than shipping the raster asset. */
+.alfred-identity {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.alfred-avatar-badge {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 27%;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.alfred-avatar {
+  width: 16px;
+  height: 16px;
+}
+
+.alfred-panel-header .alfred-avatar {
+  width: 14px;
+  height: 14px;
+  color: var(--accent);
 }
 
 #alfred-messages {

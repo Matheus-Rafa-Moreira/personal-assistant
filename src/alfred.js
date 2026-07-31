@@ -8,6 +8,7 @@ import {
   createGoal,
   searchNotesInbox,
   replanDay,
+  setReminder,
 } from './db.js';
 
 const MAX_TOOL_ROUNDS = 6;
@@ -161,6 +162,23 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'set_reminder',
+      description:
+        "Set an opt-in web-push reminder for one occurrence of an event, some number of minutes before it starts. Only works if Matt has enabled notifications in the app at least once — if the tool result says so, tell him to tap 'Reminder' on the event in-app first.",
+      parameters: {
+        type: 'object',
+        properties: {
+          eventId: { type: 'integer' },
+          occurrenceDate: { type: 'string', description: 'YYYY-MM-DD' },
+          minutesBefore: { type: 'integer', description: 'Minutes before the event to fire the reminder (0 = at start time)' },
+        },
+        required: ['eventId', 'occurrenceDate', 'minutesBefore'],
+      },
+    },
+  },
 ];
 
 function systemPrompt(todayISO, categories) {
@@ -168,7 +186,13 @@ function systemPrompt(todayISO, categories) {
   return `You are Alfred, Matt's personal calendar assistant. Today's date is ${todayISO}, timezone America/Toronto. \
 Categories: ${categoryNames}. Ground every answer ONLY in data returned by your tools — never invent events, times, or goals. \
 Keep replies SHORT and speakable (1-3 sentences), suitable for being read aloud by a voice synthesizer. \
-When you create, move, update, or delete something, confirm exactly what changed in plain language. \
+Matt often talks to you in short, terse spoken commands — read them charitably, using the conversation so far for context, but \
+NEVER guess a missing date, time, duration, or title. If any of those are missing or ambiguous for the action he wants, ask ONE \
+short clarifying question instead of calling a tool with a made-up value. \
+After ANY write action (create, update, move, delete, set_reminder) succeeds, confirm plainly and specifically what changed — \
+e.g. "Added Dentist, Fri Aug 7, 3-4pm — want a reminder?" — never a vague "done" or "okay". \
+If a tool call fails or a tool result contains an error, say so plainly in your reply — never mask, hide, or soften a real \
+backend error behind a generic apology. \
 delete_event requires confirm:true to actually run — if it reports confirmation is required, ask Matt to confirm before retrying.`;
 }
 
@@ -245,6 +269,17 @@ async function execTool(env, categories, name, args) {
     }
     case 'search_notes_inbox': {
       return await searchNotesInbox(env, args.query);
+    }
+    case 'set_reminder': {
+      const occs = await queryOccurrences(env, `${args.occurrenceDate}T00:00:00`, `${args.occurrenceDate}T23:59:59`);
+      const occ = occs.find((o) => o.eventId === args.eventId && o.occurrenceDate === args.occurrenceDate);
+      if (!occ) return { ok: false, error: 'No occurrence found for that event on that date' };
+      const result = await setReminder(env, args.eventId, args.occurrenceDate, occ.start, args.minutesBefore);
+      return {
+        ok: true,
+        reminder: result,
+        note: 'This only fires if Matt has enabled push notifications in the app at least once (tap Reminder on an event in-app to opt in).',
+      };
     }
     default:
       return { error: `unknown tool ${name}` };
