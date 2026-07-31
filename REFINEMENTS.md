@@ -54,3 +54,38 @@ Supplements the v1.1 notes in CLAUDE.md. Where they differ, THIS file wins.
 - [ ] iPhone: re-test PWA, mic permission prompt, voice loop end-to-end
 - [ ] Wipe test data, verify seeded real data intact
 - [ ] THEN: sellable template version (standing reminder)
+
+
+## V3 ADDENDUM (2026-07-31) — authoritative for this build round
+1. EVENT DETAIL SECTIONS (the ONLY permitted UI change besides menu items —
+   aesthetics otherwise FROZEN, Matt rates current look 90-95%):
+   Structured, labeled, editable sections in the event drawer:
+   Location (Apple Maps link) | Contact Info (name, tap-to-call phone) |
+   Checklist/Routine (steps w/ checkboxes) | Extra Info (description) |
+   Links (Notion) | Repeat | Category. Empty sections = small add affordance,
+   never clutter.
+2. ALFRED CONVERSATIONAL UPGRADES: keep multi-turn context; when a command
+   lacks details (date/time/duration/title), ASK a clarifying question, don't
+   guess; after ANY write action, confirm plainly what changed (e.g. "Added
+   Dentist, Fri Aug 7, 3-4pm — want a reminder?"); robust to short spoken
+   commands. NEVER mask backend errors anywhere in the app.
+3. REMINDERS VIA WEB PUSH (opt-in per event, set by Matt or Alfred):
+   - New migration file db/migrations/003-reminders.sql (also reflect in
+     schema.sql): push_subscriptions; reminders(event_id, occurrence_date,
+     fire_at, sent).
+   - scripts/setup-vapid.mjs: generate VAPID keypair; write PUBLIC key to
+     public/js/vapid.js; pipe PRIVATE key straight into
+     `npx wrangler secret put VAPID_PRIVATE_KEY` via stdin — never print it.
+   - Client: request notification permission ONLY when first reminder is set;
+     pushManager subscribe -> POST /api/push/subscribe.
+   - Worker: change cron to */5 min; scheduled() gates CalDAV sync to :00/:30
+     only; each run fires due reminders via Web Push (use a Workers-compatible
+     webpush approach, e.g. webcrypto-based aes128gcm — NOT node 'web-push').
+   - New Alfred tool: set_reminder(event, occurrence_date, minutes_before).
+4. FAMILY CALENDAR PICKER (kills the secret round-trip):
+   - GET /api/sync/calendars -> lists CalDAV calendar displayNames using
+     existing creds. More menu -> "Sync source": tap to choose; POST
+     /api/sync/target stores choice in sync_state; caldav.js prefers
+     sync_state target, falls back to CALDAV_CALENDAR_NAME secret.
+5. Build rules: code files only; no shell, no commits, no deploys; no secrets
+   in client code; keep quick-add and existing features intact.
