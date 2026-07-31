@@ -49,11 +49,32 @@ Supplements the v1.1 notes in CLAUDE.md. Where they differ, THIS file wins.
 - Keep the quick-add (<=20s entry) and event drawer features working.
 
 ## Post-build punch list (orchestrator + Matt)
-- [ ] npm install (if deps changed), wrangler deploy
-- [ ] Re-point CALDAV_CALENDAR_NAME to family calendar (needs exact name)
+- [x] npm install, wrangler deploy (2026-07-31 — Current Version ID
+      c7ef24ae-bc3e-4389-b2e6-7b33aa6d70e4; cron confirmed registered on
+      */5 * * * *)
+- [x] VAPID keys generated for real (scripts/setup-vapid.mjs had a CJS/ESM
+      import bug, fixed); db/migrations/003-reminders.sql applied to remote D1
+- [ ] Re-point CALDAV_CALENDAR_NAME to family calendar (needs exact name) —
+      or use the new in-app "Sync source" picker (More menu) instead
 - [ ] iPhone: re-test PWA, mic permission prompt, voice loop end-to-end
 - [ ] Wipe test data, verify seeded real data intact
 - [ ] THEN: sellable template version (standing reminder)
+
+## V3.1 — Claude Design pass (2026-07-31)
+Ported the chosen assets from the "Alfred Calendar" Claude Design prototype
+(project 3813fd4d-329d-4ea7-9b40-08cf78fc8491):
+- App icon set (192/512/1024/apple-touch-icon/favicon) generated from
+  icons/alfred-icon-2-grid-v2.png, wired into manifest.json + index.html.
+- public/css/alfred-tokens.css added, loaded BEFORE app.css per HANDOFF.md's
+  own porting notes — existing values still win on overlapping variable
+  names, so the frozen UI didn't change; new tokens (category colors, layout
+  metrics) are just available now.
+- Alfred's avatar (bowtie concept, icons/alfred-icon-3-bowtie-v2.png) added
+  as a hand-rolled inline SVG badge in the dock + conversation panel instead
+  of the raster PNG — that file is >256KiB and the Claude Design connector's
+  file-read tool caps at 256KiB, so the exact asset couldn't be pulled. If
+  pixel-exact matters, get that PNG to Matt directly and drop it in as
+  public/icons/alfred-avatar.png, then swap the inline SVG for an <img>.
 
 
 ## V3 ADDENDUM (2026-07-31) — authoritative for this build round
