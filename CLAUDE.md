@@ -181,3 +181,26 @@ scoping + rollover, (4) CalDAV family-calendar fix, (5) verify cron registered.
   events "don't pertain to me"); after that, bulk-categorize caldav events via
   D1 + prune stale rows from the old calendar. (2) routines/chores category home.
   (3) template repo (sellable/tailorable + fill-out form) still to build.
+
+## SESSION LOG 2026-08-02 (dark-mode colours + punch-list cleanup)
+- DARK MODE ("nocturnal"): categories.color_dark added (D1 + schema.sql +
+  db/migrations/004 + seed.sql). Miscellaneous -> #F5F5F7 (white),
+  Slack/Buffer -> #8E8E93 (gray), all other hues brightened to iOS dark
+  values. app.js: isDarkMode()/catColor()/contrastText()/refreshThemeColors();
+  every colour site now theme-aware; badge text switches black/white by
+  luminance (the stylesheet's blanket `color: white` would have made the white
+  category unreadable). OS-level theme flips repaint via matchMedia listener.
+  Repaint happens WITHOUT rebuilding markup so open sheets keep their state.
+- DOC FIX: removed the stale "temperature 0.3 / max_tokens" guidance that
+  caused the original Alfred 400s; replaced with an explicit gpt-5 warning.
+- SW cache pla-shell-v7 -> v8 so PWAs pull the new app.js.
+- Test data wiped (event id 38 "Test Event"). NOTE: it was source='caldav', so
+  if it still exists in the Apple calendar it WILL resync — delete it there.
+- Deploys this session: 1ca9a0c5 (dark colours). Verified via D1; live HTTP
+  checks return the Cloudflare Access login page by design (gate works).
+- STILL OPEN: (1) Matt picks sync source in-app; then bulk-categorize the 64
+  caldav events + prune ones from the wrong calendar. (2) routines/chores
+  category home (currently Miscellaneous — Bonus is the alternative).
+  (3) confirm UofT fall reading week EXDATEs (seed assumes 2026-10-28).
+  (4) on-device test: Alfred text/voice + reminder permission prompt.
+  (5) FINAL ITEM: sellable template repo + tailoring form.
