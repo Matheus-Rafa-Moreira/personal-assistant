@@ -68,9 +68,62 @@
     return base;
   }
 
+  // ---------- category colours: light / dark ("nocturnal") ----------
+  // Each category carries a dark-mode variant (categories.color_dark) so
+  // Miscellaneous reads white and Slack/Buffer reads gray at night, and every
+  // hue stays legible on black. Falls back to the light colour if unset.
+  function isDarkMode() {
+    const explicit = document.documentElement.dataset.theme;
+    if (explicit === 'dark') return true;
+    if (explicit === 'light') return false;
+    return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  }
+
+  function catColor(cat) {
+    if (!cat) return isDarkMode() ? '#8E8E93' : '#6B7280';
+    return isDarkMode() && cat.color_dark ? cat.color_dark : cat.color;
+  }
+
+  // White-on-white is unreadable now that a category can be near-white in dark
+  // mode, so badge text follows the swatch's luminance (WCAG relative
+  // luminance, sRGB) instead of the stylesheet's blanket `color: white`.
+  function contrastText(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
+    if (!m) return '#FFFFFF';
+    const int = parseInt(m[1], 16);
+    const chan = [(int >> 16) & 255, (int >> 8) & 255, int & 255].map((v) => {
+      const c = v / 255;
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    });
+    const lum = 0.2126 * chan[0] + 0.7152 * chan[1] + 0.0722 * chan[2];
+    return lum > 0.55 ? '#000000' : '#FFFFFF';
+  }
+
   function categoryColor(categoryId) {
-    const c = categoriesById.get(categoryId);
-    return c ? c.color : '#6B7280';
+    return catColor(categoriesById.get(categoryId));
+  }
+
+  // Re-paints every colour-bearing node after a theme flip, without rebuilding
+  // markup (so open sheets and chip selection survive).
+  function refreshThemeColors() {
+    document.querySelectorAll('[data-legend-category]').forEach((el) => {
+      el.style.background = categoryColor(Number(el.dataset.legendCategory));
+    });
+    document.querySelectorAll('[data-chip-dot]').forEach((el) => {
+      el.style.background = categoryColor(Number(el.dataset.chipDot));
+    });
+    if (calendar) calendar.refetchEvents();
+    if (currentViewName === 'dayGridMonth' && selectedDate) renderDayList(selectedDate);
+    if (currentDetail) {
+      const cat = categoriesById.get(currentDetail.categoryId);
+      const badge = document.getElementById('detail-category-badge');
+      if (cat && badge) {
+        const bg = currentDetail.colorOverride || catColor(cat);
+        badge.style.background = bg;
+        badge.style.color = contrastText(bg);
+      }
+      renderDetailSections(currentDetail);
+    }
   }
 
   function escapeHtml(s) {
@@ -109,14 +162,14 @@
 
     const legend = document.getElementById('legend');
     legend.innerHTML = categories
-      .map((c) => `<span class="legend-item"><i style="background:${c.color}"></i>${c.name}</span>`)
+      .map((c) => `<span class="legend-item"><i data-legend-category="${c.id}" style="background:${catColor(c)}"></i>${c.name}</span>`)
       .join('');
 
     const chips = document.getElementById('qa-category-chips');
     chips.innerHTML = categories
       .map(
         (c) =>
-          `<button type="button" class="qa-chip" data-category-id="${c.id}"><span class="qa-chip-dot" style="background:${c.color}"></span>${escapeHtml(c.name)}</button>`
+          `<button type="button" class="qa-chip" data-category-id="${c.id}"><span class="qa-chip-dot" data-chip-dot="${c.id}" style="background:${catColor(c)}"></span>${escapeHtml(c.name)}</button>`
       )
       .join('');
     chips.querySelectorAll('[data-category-id]').forEach((btn) => {
@@ -496,7 +549,7 @@
       case 'category': {
         const cat = categoriesById.get(occ.categoryId);
         return cat
-          ? `<span class="badge" style="background:${occ.colorOverride || cat.color}">${escapeHtml(cat.name)}</span>`
+          ? `<span class="badge" style="background:${occ.colorOverride || catColor(cat)};color:${contrastText(occ.colorOverride || catColor(cat))}">${escapeHtml(cat.name)}</span>`
           : `<span class="section-empty">+ Set category</span>`;
       }
       case 'reminder':
@@ -728,7 +781,9 @@
     const badge = document.getElementById('detail-category-badge');
     if (cat) {
       badge.textContent = cat.name;
-      badge.style.background = occ.colorOverride || cat.color;
+      const badgeBg = occ.colorOverride || catColor(cat);
+      badge.style.background = badgeBg;
+      badge.style.color = contrastText(badgeBg);
       badge.classList.remove('hidden');
     } else {
       badge.classList.add('hidden');
@@ -909,11 +964,20 @@
     const saved = localStorage.getItem('theme');
     if (saved) document.documentElement.dataset.theme = saved;
 
+    // When no explicit choice is stored, follow the OS and repaint on flip.
+    if (window.matchMedia) {
+      const mq = window.matchMedia('(prefers-color-scheme: dark)');
+      const onChange = () => { if (!localStorage.getItem('theme')) refreshThemeColors(); };
+      if (mq.addEventListener) mq.addEventListener('change', onChange);
+      else if (mq.addListener) mq.addListener(onChange);
+    }
+
     document.getElementById('btn-theme').addEventListener('click', () => {
       const current = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
       const next = current === 'dark' ? 'light' : 'dark';
       document.documentElement.dataset.theme = next;
       localStorage.setItem('theme', next);
+      refreshThemeColors();
       closeSheet('more-menu');
     });
   }

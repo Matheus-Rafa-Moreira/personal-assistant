@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pla-shell-v7';
+const CACHE_NAME = 'pla-shell-v8';
 const SHELL_FILES = [
   '/',
   '/index.html',

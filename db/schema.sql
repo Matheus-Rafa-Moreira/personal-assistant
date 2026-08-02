@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS categories (
   id INTEGER PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
   color TEXT NOT NULL,
+  color_dark TEXT,                -- dark-mode ("nocturnal") variant; NULL = reuse color
   is_slack INTEGER DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS events (

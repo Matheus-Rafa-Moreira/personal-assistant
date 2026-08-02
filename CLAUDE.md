@@ -52,7 +52,10 @@ implementer's choice, but /api/replan needs server-side expansion for the day.
 System: "You are Matt's schedule replanner. Given today's events (JSON) and a
 disruption, output STRICT JSON {summary, proposal:[{title,start,end,category}]}
 keeping fixed commitments (school) unless impossible, preserving routines,
-inserting slack." Use OPENAI_MODEL, max_tokens ~1200, temperature 0.3.
+inserting slack." Use OPENAI_MODEL. NOTE: gpt-5-family models REJECT
+`temperature` and `max_tokens` — use `max_completion_tokens` and omit
+temperature. Sending the old params made every Alfred call 400 (surfaced
+to Matt as "Sorry, I didn't catch that"). Do not reintroduce them.
 
 ## Data notes
 - Timetable seeded from UofT ACORN Fall 2026 (see db/seed.sql). H1 F courses end
