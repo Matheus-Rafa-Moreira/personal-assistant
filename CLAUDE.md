@@ -231,3 +231,44 @@ scoping + rollover, (4) CalDAV family-calendar fix, (5) verify cron registered.
   (Settings > Secrets and variables > Actions). Until then the Action fails.
   NOTE: backup includes push_subscriptions (endpoints/keys) — repo is private;
   keep it private.
+
+## SESSION LOG 2026-08-03 (the three bugs that made most views unusable)
+- ROOT CAUSE OF "the website is broken": a top-level `eventContent` returned
+  `undefined` for non-month views. In FullCalendar that means RENDER NOTHING,
+  not "use the default" — so week, day and list view showed events with no
+  titles at all. Fixed by moving the dot renderer under
+  `views.dayGridMonth.eventContent`. If you ever add a global content hook,
+  remember this.
+- ALL-DAY EVENTS (new, migration 005): there was no all_day concept. 14 events
+  (Family Vacation, the kids' camps, every academic term marker) were stored as
+  00:00:00 -> 23:59:59 and drawn as 24-hour timed blocks that covered the whole
+  column — Family Vacation alone blanked two weeks of week view. all_day now
+  flows: ICAL isDate -> caldav.js -> events.all_day -> EVENT_COLUMNS ->
+  occurrences.allDay -> FullCalendar. NOTE FullCalendar's all-day end is
+  EXCLUSIVE, hence allDayEndExclusive() in app.js; without it the last day of a
+  trip disappears.
+- MONTH DOTS were suppressed after any re-render: the dedup Map was only cleared
+  inside the events fetch, so a cached re-render (view switch, theme flip) found
+  every colour already "seen" and dropped every dot. Now stateless, derived from
+  lastOccurrences. Multi-day events: thin colour rule under 700px (a 50px column
+  truncates a label to noise), labelled bar above it.
+- CATEGORIES (migration 006): all 66 caldav events had category_id NULL, so the
+  calendar was almost entirely uncategorised grey. caldav.js now files them on
+  INSERT (sports -> Athletic, camps/lessons -> Extracurriculars, else Family);
+  006 backfilled the existing rows. UPDATE deliberately does NOT touch
+  category_id, so re-filing an event by hand survives the next sync. Production
+  is now 0 uncategorised (Family 30, Athletic 30, Academic 15, Misc 7,
+  Extracurriculars 6, Slack 1).
+- Imported titles are flattened (two had hard newlines + U+202F pasted in).
+- Legend was 4 wrapped rows / 102px of an 812px phone screen before any calendar
+  was visible — now one horizontally scrolling row.
+- Week/day view opens at 07:00 instead of midnight. SW cache v9 -> v10.
+- Deployed 39f5379c. Cron */5 confirmed registered in the deploy output.
+- Pre-migration snapshot kept at db/backups/pre-migration-20260803T163034Z.sql.
+- STILL OPEN: (1) "Test Event" (id 81) is source='caldav' and still exists in
+  the Apple "Family" calendar — delete it THERE or it resyncs forever.
+  (2) routines/chores category home (still Miscellaneous; Bonus is the
+  alternative). (3) confirm UofT fall reading week EXDATEs. (4) on-device test:
+  Alfred text/voice + reminder permission prompt. (5) repo secrets
+  CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID for the nightly backup Action.
+  (6) DONE — template repo shipped: Matheus-Rafa-Moreira/Template-Calendar-Assistant.
