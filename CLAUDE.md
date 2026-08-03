@@ -204,3 +204,30 @@ scoping + rollover, (4) CalDAV family-calendar fix, (5) verify cron registered.
   (3) confirm UofT fall reading week EXDATEs (seed assumes 2026-10-28).
   (4) on-device test: Alfred text/voice + reminder permission prompt.
   (5) FINAL ITEM: sellable template repo + tailoring form.
+
+## SESSION LOG 2026-08-02b (design verified, academic dates, auto-backup)
+- CLAUDE DESIGN: VERIFIED already ported + live. Source of truth is
+  ~/Downloads/"Prototype delivery with icon concepts.zip" (extracted copy at
+  /tmp/dsx). Chosen grid icon IS installed (public/icons/icon-1024.png is
+  byte-identical to icons/alfred-icon-2-grid-v2.png) + manifest + apple-touch;
+  bowtie avatar is inline SVG in the Alfred dock. NOT adopted: the literal
+  alfred-tokens.css layer (values were hand-rolled instead). Deliberate — the
+  look is at Matt's 90-95% bar and swapping the token layer risks regression.
+  Offer it only if Matt asks for it explicitly.
+- ACADEMIC DATES (UofT A&S 2026-27, web-verified): fall reading week is
+  Oct 26-30 2026 (already had it). GAPS FIXED: Thanksgiving Mon 2026-10-12
+  (events 1,6) and Good Friday Fri 2027-03-26 (events 1,2) — both would have
+  drawn phantom classes. Added 8 visible no-class/term marker events
+  (category Academic). seed.sql updated to match. NOTE: "PA days" are Ontario
+  elementary/secondary; universities have stat holidays + reading weeks.
+  Isabelle's school PA days would arrive via the family CalDAV sync instead.
+  UNVERIFIED: exact winter term start (seed excludes 2027-01-04).
+- AUTO-BACKUP (new): code was in git but DATA had NO backup. Added
+  .github/workflows/backup-d1.yml — nightly 07:15 UTC + manual dispatch,
+  exports the whole D1 to db/backups/personal-assistant-db.sql, sanity-checks
+  it, commits only on change. Also `npm run backup` for on-demand. First
+  snapshot committed (8 tables / 107 rows).
+  REQUIRES Matt to add repo secrets CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID
+  (Settings > Secrets and variables > Actions). Until then the Action fails.
+  NOTE: backup includes push_subscriptions (endpoints/keys) — repo is private;
+  keep it private.

@@ -23,11 +23,11 @@ INSERT INTO categories (id,name,color,color_dark,is_slack) VALUES
 INSERT INTO events (title,category_id,color_override,start,"end",rrule,exdates,location,description,source) VALUES
  ('MAT133Y1 LEC 0501','1','#1B9E77','2026-09-09T13:00:00','2026-09-09T14:00:00',
   'FREQ=WEEKLY;BYDAY=MO,WE,FR;UNTIL=20270409T235959',
-  '["2026-10-26","2026-10-28","2026-10-30","2026-12-25","2026-12-28","2026-12-30","2027-01-01","2027-01-04","2027-02-15","2027-02-17","2027-02-19"]',
+  '["2026-10-12","2026-10-26","2026-10-28","2026-10-30","2026-12-25","2026-12-28","2026-12-30","2027-01-01","2027-01-04","2027-02-15","2027-02-17","2027-02-19","2027-03-26"]',
   'OI 2212','Calculus & Linear Algebra (full year)','seed'),
  ('MAT133Y1 TUT 1201','1','#1B9E77','2026-09-11T12:00:00','2026-09-11T13:00:00',
   'FREQ=WEEKLY;BYDAY=FR;UNTIL=20270409T235959',
-  '["2026-10-30","2026-12-25","2027-01-01","2027-02-19"]',
+  '["2026-10-30","2026-12-25","2027-01-01","2027-02-19","2027-03-26"]',
   'OI 8280','Weekly tutorial','seed'),
  ('ECO101H1 LEC 0301','1','#7C4DFF','2026-09-08T13:00:00','2026-09-08T15:00:00',
   'FREQ=WEEKLY;BYDAY=TU;UNTIL=20261208T235959','["2026-10-27"]','OI G162','Intro Economics (fall)','seed'),
@@ -36,7 +36,7 @@ INSERT INTO events (title,category_id,color_override,start,"end",rrule,exdates,l
  ('RSM100H1 LEC 0101','1','#D81B60','2026-09-08T11:00:00','2026-09-08T13:00:00',
   'FREQ=WEEKLY;BYDAY=TU;UNTIL=20261208T235959','["2026-10-27"]','OI G162','Intro to Management (fall)','seed'),
  ('PRT101H1 LEC 5101 (Mon)','1','#D95F0F','2026-09-14T17:00:00','2026-09-14T19:00:00',
-  'FREQ=WEEKLY;BYDAY=MO;UNTIL=20261208T235959','["2026-10-26"]','NF 113','Portuguese (fall)','seed'),
+  'FREQ=WEEKLY;BYDAY=MO;UNTIL=20261208T235959','["2026-10-12","2026-10-26"]','NF 113','Portuguese (fall)','seed'),
  ('PRT101H1 LEC 5101 (Wed)','1','#D95F0F','2026-09-09T17:00:00','2026-09-09T19:00:00',
   'FREQ=WEEKLY;BYDAY=WE;UNTIL=20261208T235959','["2026-10-28"]','NF 006','Portuguese (fall)','seed');
 
@@ -66,3 +66,17 @@ INSERT INTO events (title,category_id,start,"end",rrule,notion_url,description,s
 INSERT INTO events (title,category_id,start,"end",rrule,description,source) VALUES
  ('Buffer / Catch-up','14','2026-08-03T16:00:00','2026-08-03T17:00:00','FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR',
   'Unassigned slack time — protected breathing room','seed');
+
+-- ===== Academic no-class days (UofT Arts & Science 2026-27) =====
+-- Ontario "PA days" are a grade-school thing; the university equivalents are
+-- statutory holidays + reading weeks. These are visible markers; the matching
+-- class cancellations live in each course's exdates above.
+INSERT INTO events (title,category_id,start,"end",description,source) VALUES
+ ('Thanksgiving — University closed',1,'2026-10-12T00:00:00','2026-10-12T23:59:59','Statutory holiday. No classes.','seed'),
+ ('Fall Reading Week — no classes',1,'2026-10-26T00:00:00','2026-10-30T23:59:59','Arts & Science fall reading week (Oct 26–30, 2026).','seed'),
+ ('Fall classes end',1,'2026-12-08T00:00:00','2026-12-08T23:59:59','Last day of fall (F) classes.','seed'),
+ ('Winter break — University closed',1,'2026-12-24T00:00:00','2027-01-03T23:59:59','Holiday closure between fall and winter terms.','seed'),
+ ('Family Day — University closed',1,'2027-02-15T00:00:00','2027-02-15T23:59:59','Statutory holiday. No classes.','seed'),
+ ('Winter Reading Week — no classes',1,'2027-02-15T00:00:00','2027-02-19T23:59:59','Arts & Science winter reading week.','seed'),
+ ('Good Friday — University closed',1,'2027-03-26T00:00:00','2027-03-26T23:59:59','Statutory holiday. No classes.','seed'),
+ ('Winter classes end',1,'2027-04-09T00:00:00','2027-04-09T23:59:59','Last day of winter (Y/S) classes.','seed');
