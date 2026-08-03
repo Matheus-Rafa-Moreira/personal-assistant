@@ -10,7 +10,6 @@
   let currentViewName = 'dayGridMonth';
   let lastOccurrences = []; // raw occurrences from the most recent /api/events fetch
   let selectedDate = null; // YYYY-MM-DD selected in month view's day list
-  let monthDotState = new Map(); // dateStr -> { colors: Set, count } while month-view dots mount
 
   // ---------- helpers ----------
 
@@ -38,11 +37,26 @@
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
 
-  function formatRange(startIso, endIso) {
+  // FullCalendar's all-day end is exclusive; ours is the last day at 23:59:59.
+  // Roll forward to the following midnight so a 3rd-16th trip covers the 16th.
+  function allDayEndExclusive(endIso) {
+    const d = new Date(`${endIso.slice(0, 10)}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + 1);
+    return d.toISOString().slice(0, 10);
+  }
+
+  function formatRange(startIso, endIso, allDay) {
     const s = new Date(startIso.replace(/Z$/, ''));
     const e = new Date(endIso.replace(/Z$/, ''));
     const dateFmt = { weekday: 'short', month: 'short', day: 'numeric' };
     const timeFmt = { hour: 'numeric', minute: '2-digit' };
+
+    if (allDay) {
+      const sameDay = startIso.slice(0, 10) === endIso.slice(0, 10);
+      return sameDay
+        ? `${s.toLocaleDateString(undefined, dateFmt)} · all-day`
+        : `${s.toLocaleDateString(undefined, dateFmt)} – ${e.toLocaleDateString(undefined, dateFmt)} · all-day`;
+    }
     return `${s.toLocaleDateString(undefined, dateFmt)} · ${s.toLocaleTimeString(undefined, timeFmt)} – ${e.toLocaleTimeString(undefined, timeFmt)}`;
   }
 
@@ -101,6 +115,30 @@
 
   function categoryColor(categoryId) {
     return catColor(categoriesById.get(categoryId));
+  }
+
+  function occColor(occ) {
+    return occ.colorOverride || categoryColor(occ.categoryId);
+  }
+
+  // Should this occurrence draw a dot in the month grid?
+  //
+  // Answered from lastOccurrences rather than accumulated while events mount.
+  // The previous version kept a Map that was only cleared inside the events
+  // fetch, so any re-render that reused cached events (switching back to month,
+  // flipping theme) found every colour already "seen" and suppressed the lot —
+  // the grid silently lost all its dots.
+  function showsMonthDot(occ, color) {
+    const sameDay = lastOccurrences.filter((o) => o.occurrenceDate === occ.occurrenceDate && !o.allDay);
+    const distinct = [];
+    for (const o of sameDay) {
+      const c = occColor(o);
+      if (!distinct.includes(c)) distinct.push(c);
+    }
+    // At most four colours per day, and only the first event of each colour.
+    if (distinct.indexOf(color) >= 4) return false;
+    const firstOfColor = sameDay.find((o) => occColor(o) === color);
+    return !!firstOfColor && firstOfColor.id === occ.id;
   }
 
   // Re-paints every colour-bearing node after a theme flip, without rebuilding
@@ -264,6 +302,9 @@
       // just be redundant (and would count suppressed/deduped events too).
       dayMaxEvents: false,
       eventTimeFormat: { hour: 'numeric', minute: '2-digit', meridiem: 'short' },
+      // Week and day view opened at midnight, so the first screenful was six
+      // empty hours and you had to scroll to reach anything real.
+      scrollTime: '07:00:00',
       events: async (fetchInfo, successCallback, failureCallback) => {
         try {
           const start = toApiDatetime(fetchInfo.start);
@@ -271,13 +312,17 @@
           const res = await fetch(`/api/events?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
           const occurrences = await res.json();
           lastOccurrences = occurrences;
-          monthDotState = new Map(); // reset before this batch mounts via eventContent
           successCallback(
             occurrences.map((occ) => ({
               id: occ.id,
               title: occ.title,
               start: occ.start,
-              end: occ.end,
+              // An all-day event is stored as 00:00:00 -> 23:59:59 on the last
+              // day. FullCalendar treats an all-day end as EXCLUSIVE, so the
+              // stored end would drop the final day; advance it to the next
+              // midnight to keep the span honest.
+              end: occ.allDay ? allDayEndExclusive(occ.end) : occ.end,
+              allDay: !!occ.allDay,
               backgroundColor: occ.colorOverride || categoryColor(occ.categoryId),
               borderColor: occ.colorOverride || categoryColor(occ.categoryId),
               extendedProps: occ,
@@ -288,27 +333,12 @@
           failureCallback(err);
         }
       },
-      eventContent: (arg) => {
-        // Month view: category-color dots instead of text chips, deduped by
-        // color and capped at 4 per day (the day's actual events are
-        // surfaced in the selected-day list below) — matches the design's
-        // own `uniq.slice(0,4)` dot logic exactly.
-        if (arg.view.type !== 'dayGridMonth') return undefined; // other views: FullCalendar's default rendering
-        const dateStr = arg.event.extendedProps.occurrenceDate;
-        const color = arg.event.backgroundColor;
-        let state = monthDotState.get(dateStr);
-        if (!state) {
-          state = { colors: new Set(), count: 0 };
-          monthDotState.set(dateStr, state);
-        }
-        if (state.count >= 4 || state.colors.has(color)) return { domNodes: [] };
-        state.colors.add(color);
-        state.count++;
-        const dot = document.createElement('span');
-        dot.className = 'month-dot';
-        dot.style.background = color;
-        return { domNodes: [dot] };
-      },
+      // eventContent lives under `views.dayGridMonth` (below), NOT here.
+      // A top-level eventContent applies to EVERY view, and returning
+      // undefined from it does not mean "fall back to the default" — it means
+      // "render nothing", which silently blanked every title in week, day and
+      // list view. Scoping it to the month view is what keeps those views
+      // rendering FullCalendar's own event content.
       eventClick: (info) => openDetail(info.event.extendedProps),
       dateClick: (info) => {
         if (currentViewName === 'multiMonthYear') {
@@ -321,6 +351,34 @@
       navLinkDayClick: (date) => changeView('timeGridDay', date),
       navLinkWeekClick: (weekStart) => changeView('timeGridWeek', weekStart),
       datesSet: () => updateNavBar(),
+      views: {
+        dayGridMonth: {
+          // Single-day events collapse to a category-colour dot; all-day and
+          // multi-day events keep a small labelled bar, the way iOS Calendar
+          // shows a trip or a holiday across a week. The day's real events are
+          // listed in full underneath the grid.
+          eventDisplay: 'list-item',
+          eventContent: (arg) => {
+            const occ = arg.event.extendedProps;
+            const color = arg.event.backgroundColor;
+
+            if (arg.event.allDay) {
+              const bar = document.createElement('span');
+              bar.className = 'month-bar';
+              bar.style.background = color;
+              bar.style.color = contrastText(color);
+              bar.textContent = arg.event.title;
+              return { domNodes: [bar] };
+            }
+
+            if (!showsMonthDot(occ, color)) return { domNodes: [] };
+            const dot = document.createElement('span');
+            dot.className = 'month-dot';
+            dot.style.background = color;
+            return { domNodes: [dot] };
+          },
+        },
+      },
     });
     calendar.render();
     updateNavBar();
@@ -338,9 +396,10 @@
     const list = document.getElementById('month-day-list');
     if (list.classList.contains('hidden')) return;
 
+    // All-day items sort to the top, the way every calendar app does it.
     const dayOccs = lastOccurrences
       .filter((o) => o.occurrenceDate === dateStr)
-      .sort((a, b) => a.start.localeCompare(b.start));
+      .sort((a, b) => (!!b.allDay - !!a.allDay) || a.start.localeCompare(b.start));
 
     const d = new Date(`${dateStr}T00:00:00`);
     const headLabel = d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
@@ -352,7 +411,7 @@
         const cat = categoriesById.get(occ.categoryId);
         return `
       <div class="day-list-row" data-row-index="${i}">
-        <div class="day-list-time">${formatTime(occ.start)}</div>
+        <div class="day-list-time">${occ.allDay ? 'all-day' : formatTime(occ.start)}</div>
         <div class="day-list-accent" style="background:${color}"></div>
         <div class="day-list-body">
           <div class="day-list-title">${escapeHtml(occ.title)}</div>
@@ -798,7 +857,7 @@
     }
 
     document.getElementById('detail-title').textContent = occ.title;
-    document.getElementById('detail-time').textContent = formatRange(occ.start, occ.end);
+    document.getElementById('detail-time').textContent = formatRange(occ.start, occ.end, occ.allDay);
 
     renderDetailSections(occ);
 

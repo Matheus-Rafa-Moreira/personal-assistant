@@ -193,17 +193,25 @@ button { font: inherit; }
 .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
 .btn-cancel { background: transparent; color: var(--muted); }
 
+/* One horizontally-scrolling row rather than a wrapping block. With 14
+   categories the wrapping version was four rows tall — 102px of an 812px
+   phone screen spent before any calendar was visible. */
 .legend {
   display: flex;
   gap: 14px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
   padding: 0 16px 8px;
   font-size: 0.74rem;
   color: var(--muted);
 }
 
-.legend-item { display: inline-flex; align-items: center; gap: 5px; }
-.legend-item i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.legend::-webkit-scrollbar { display: none; }
+
+.legend-item { display: inline-flex; align-items: center; gap: 5px; flex: none; white-space: nowrap; }
+.legend-item i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
 
 #calendar {
   flex: 1;
@@ -312,6 +320,42 @@ button { font: inherit; }
   border-radius: 999px;
   display: block;
 }
+
+/* All-day and multi-day events span their days as a bar. At phone width a
+   50px column truncates any label to noise ("ISABELLE VO…"), so the bar
+   becomes a thin colour rule — the same thing iOS does on iPhone — and the
+   day list underneath carries the names. Labels come back when there's room. */
+.month-bar {
+  display: block;
+  width: 100%;
+  border-radius: 999px;
+  height: 4px;
+  font-size: 0;
+  overflow: hidden;
+}
+
+@media (min-width: 700px) {
+  .month-bar {
+    height: auto;
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+}
+
+/* FullCalendar wraps a spanning event in its own block chrome; the bar above
+   supplies the colour and padding, so strip the wrapper back to nothing. */
+.fc-daygrid-block-event {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  margin-top: 1px;
+}
+.fc-daygrid-block-event .fc-event-main { padding: 0; }
 .fc-daygrid-day.fc-day-today { background: color-mix(in srgb, var(--accent) 6%, transparent); }
 
 /* Selected-day list underneath the month grid */

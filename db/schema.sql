@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS events (
   color_override TEXT,
   start TEXT NOT NULL,            -- ISO local datetime of first occurrence
   end TEXT NOT NULL,
+  all_day INTEGER DEFAULT 0,      -- 1 = date-only event; times are ignored for display
   rrule TEXT,                     -- RFC5545 RRULE string, NULL = one-off
   exdates TEXT,                   -- JSON array of ISO dates to skip
   description TEXT,

@@ -71,6 +71,7 @@ export function expandEvent(event, rangeStart, rangeEnd, overrides = []) {
       notionUrl: event.notion_url,
       rrule: event.rrule,
       isRecurring: !!event.rrule,
+      allDay: !!event.all_day,
       overridden,
     });
   };

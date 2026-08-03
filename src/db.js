@@ -4,7 +4,7 @@ import { runReplan } from './replan.js';
 // Shared D1 access layer. Used by both the HTTP handlers in worker.js and the
 // Alfred tool-calling agent (alfred.js) so the two paths can never drift.
 
-export const EVENT_COLUMNS = `id, title, category_id, color_override, start, "end", rrule, exdates,
+export const EVENT_COLUMNS = `id, title, category_id, color_override, start, "end", all_day, rrule, exdates,
   description, steps, location, contact_name, contact_phone, notion_url, source, caldav_uid, created_at, updated_at`;
 
 export async function loadOverridesByEventId(env, eventIds) {

@@ -69,6 +69,42 @@ function icalTimeToNaive(icalTime, timeZone) {
   return `${p.year}-${p.month}-${p.day}T${hour}:${p.minute}:${p.second}`;
 }
 
+// Imported summaries arrive with hard newlines and narrow no-break spaces
+// pasted in from other apps ("Read Write and Think\nScheduled: Aug 12, 2024 at
+// 9:00 AM"), which break the single-line layout of the list and day views.
+// Collapse to one line here so nothing downstream has to cope with it.
+function cleanTitle(raw) {
+  const flat = String(raw || '')
+    .replace(/[   ]/g, ' ')
+    .replace(/\s*[\r\n]+\s*/g, ' — ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  if (!flat) return '(untitled)';
+  return flat.length > 120 ? `${flat.slice(0, 119).trimEnd()}…` : flat;
+}
+
+// Imported events used to land with no category at all, which rendered the
+// whole calendar in the uncategorised grey and left the day list with a blank
+// subtitle. They come from a family calendar, so Family is the honest default;
+// the obvious sport and activity cases get sorted out on the way in. Applied
+// only on INSERT, so re-categorising an event in the app survives the next sync.
+const IMPORT_RULES = [
+  [/\b(soccer|futsal|tennis|volleyball|basketball|hockey|baseball|swim|game|practice|tournament|osa)\b/i, 'Athletic'],
+  [/\b(gym|workout|training|run|yoga|pilates)\b/i, 'Fitness'],
+  [/\b(camp|lesson|lessons|piano|guitar|choir|tutor|read write and think)\b/i, 'Extracurriculars'],
+];
+
+export function classifyImportedEvent(title, categoryIdByName) {
+  const pick = (name) => categoryIdByName.get(name.toLowerCase()) ?? null;
+  for (const [pattern, name] of IMPORT_RULES) {
+    if (pattern.test(title)) {
+      const id = pick(name);
+      if (id) return id;
+    }
+  }
+  return pick('Family');
+}
+
 function parseVEvent(icsData, timeZone) {
   const jcal = ICAL.parse(icsData);
   const comp = new ICAL.Component(jcal);
@@ -78,9 +114,13 @@ function parseVEvent(icsData, timeZone) {
   const rruleProp = vevent.getFirstPropertyValue('rrule');
   return {
     uid: ev.uid,
-    title: ev.summary || '(untitled)',
+    title: cleanTitle(ev.summary),
     start: icalTimeToNaive(ev.startDate, timeZone),
     end: icalTimeToNaive(ev.endDate, timeZone),
+    // ICAL marks a date-only DTSTART as isDate. Without carrying this through,
+    // an all-day event becomes a 24-hour timed block that covers the entire
+    // column in week and day view.
+    allDay: !!ev.startDate?.isDate,
     location: ev.location || null,
     description: ev.description || null,
     rrule: rruleProp ? rruleProp.toString() : null,
@@ -94,6 +134,10 @@ async function pull(env, client, calendar) {
     end: new Date(now + PULL_WINDOW_DAYS_FORWARD * 86400000).toISOString(),
   };
   const objects = await client.fetchCalendarObjects({ calendar, timeRange });
+
+  const categoryRows = await env.DB.prepare('SELECT id, name FROM categories').all();
+  const categoryIdByName = new Map(categoryRows.results.map((c) => [c.name.toLowerCase(), c.id]));
+
   let inserted = 0;
   let updated = 0;
   for (const obj of objects) {
@@ -111,19 +155,33 @@ async function pull(env, client, calendar) {
       .first();
 
     if (existing) {
+      // category_id is deliberately not touched on update: if you re-file an
+      // imported event in the app, the next sync must not undo that.
       await env.DB.prepare(
-        `UPDATE events SET title=?, start=?, "end"=?, location=?, rrule=?, caldav_url=?, caldav_etag=?, updated_at=datetime('now')
+        `UPDATE events SET title=?, start=?, "end"=?, all_day=?, location=?, rrule=?, caldav_url=?, caldav_etag=?, updated_at=datetime('now')
          WHERE id=?`
       )
-        .bind(parsed.title, parsed.start, parsed.end, parsed.location, parsed.rrule, obj.url, obj.etag, existing.id)
+        .bind(parsed.title, parsed.start, parsed.end, parsed.allDay ? 1 : 0, parsed.location, parsed.rrule, obj.url, obj.etag, existing.id)
         .run();
       updated++;
     } else {
       await env.DB.prepare(
-        `INSERT INTO events (title, start, "end", location, description, rrule, source, caldav_uid, caldav_url, caldav_etag)
-         VALUES (?, ?, ?, ?, ?, ?, 'caldav', ?, ?, ?)`
+        `INSERT INTO events (title, category_id, start, "end", all_day, location, description, rrule, source, caldav_uid, caldav_url, caldav_etag)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'caldav', ?, ?, ?)`
       )
-        .bind(parsed.title, parsed.start, parsed.end, parsed.location, parsed.description, parsed.rrule, parsed.uid, obj.url, obj.etag)
+        .bind(
+          parsed.title,
+          classifyImportedEvent(parsed.title, categoryIdByName),
+          parsed.start,
+          parsed.end,
+          parsed.allDay ? 1 : 0,
+          parsed.location,
+          parsed.description,
+          parsed.rrule,
+          parsed.uid,
+          obj.url,
+          obj.etag
+        )
         .run();
       inserted++;
     }
