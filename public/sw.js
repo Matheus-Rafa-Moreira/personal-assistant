@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pla-shell-v8';
+const CACHE_NAME = 'pla-shell-v9';
 const SHELL_FILES = [
   '/',
   '/index.html',
@@ -6,6 +6,7 @@ const SHELL_FILES = [
   '/css/app.css',
   '/js/app.js',
   '/js/vapid.js',
+  '/vendor/fullcalendar-6.1.15.min.js',
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
@@ -15,7 +16,19 @@ const SHELL_FILES = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_FILES)));
+  // Individual puts (not addAll): one missing/blocked file must not abort the
+  // whole install and strand the app on an older service worker.
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) =>
+      Promise.all(
+        SHELL_FILES.map((file) =>
+          fetch(file, { cache: 'reload' })
+            .then((res) => (res.ok ? cache.put(file, res) : null))
+            .catch(() => null)
+        )
+      )
+    )
+  );
   self.skipWaiting();
 });
 
@@ -28,23 +41,36 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// Network-first for app code, cache only as an offline fallback.
+//
+// The previous cache-first policy could permanently pin a bad response — most
+// dangerously a Cloudflare Access login page served in place of a script when a
+// session expired — which left the chrome rendering and the calendar blank with
+// no error. Network-first means a bad copy can never outlive one refresh.
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
+  const req = event.request;
+  if (req.method !== 'GET') return;
 
-  // Never cache API calls — always hit the network for live data.
+  const url = new URL(req.url);
+
+  // Live data always comes from the network.
   if (url.pathname.startsWith('/api/')) return;
 
+  // Never manage cross-origin requests; let the browser handle them normally.
+  if (url.origin !== self.location.origin) return;
+
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request).then((res) => {
-        if (res.ok && event.request.method === 'GET') {
+    fetch(req)
+      .then((res) => {
+        // Only cache genuine successes. An Access redirect or error page must
+        // never be stored as if it were app code.
+        if (res.ok && res.type === 'basic') {
           const clone = res.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
         }
         return res;
-      });
-    })
+      })
+      .catch(() => caches.match(req).then((cached) => cached || caches.match('/index.html')))
   );
 });
 

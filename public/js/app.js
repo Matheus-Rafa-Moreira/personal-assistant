@@ -243,6 +243,14 @@
 
   function initCalendar() {
     const el = document.getElementById('calendar');
+    // Surface a real message instead of a silently blank calendar if the
+    // library failed to load (stale cache, blocked asset, expired Access).
+    if (typeof FullCalendar === 'undefined' || !FullCalendar.Calendar) {
+      el.innerHTML =
+        '<div style="padding:24px;text-align:center;color:var(--fg-2,#666);font-size:0.95rem">' +
+        'Calendar engine failed to load.<br>Pull down to refresh, or reopen the app.</div>';
+      return;
+    }
     calendar = new FullCalendar.Calendar(el, {
       initialView: 'dayGridMonth',
       headerToolbar: false,
