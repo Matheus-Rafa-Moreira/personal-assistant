@@ -1,0 +1,52 @@
+name: Backup D1 to repo
+
+# Automatic off-site backup of the live database into this repo.
+# The code was always in git; the DATA (events, categories, reminders,
+# push subscriptions) lived only in Cloudflare D1 with no second copy.
+# This exports the whole database nightly and commits it when it changes,
+# so the repo is a complete restore point for the app.
+
+on:
+  schedule:
+    - cron: '15 7 * * *'   # 07:15 UTC daily (~03:15 Toronto)
+  workflow_dispatch: {}     # plus a manual "Run workflow" button
+
+permissions:
+  contents: write
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Export D1
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          mkdir -p db/backups
+          npx --yes wrangler@4 d1 export personal-assistant-db \
+            --remote --output db/backups/personal-assistant-db.sql
+
+      - name: Guard against a truncated or empty export
+        run: |
+          test -s db/backups/personal-assistant-db.sql
+          grep -q "CREATE TABLE" db/backups/personal-assistant-db.sql
+          echo "sane: $(grep -c 'INSERT INTO' db/backups/personal-assistant-db.sql) insert statements"
+
+      - name: Commit if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- db/backups; then
+            echo "No database changes since the last backup."
+          else
+            git add db/backups
+            git commit -m "Automated D1 backup $(date -u +'%Y-%m-%d')"
+            git push
+          fi
